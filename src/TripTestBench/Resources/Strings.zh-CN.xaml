@@ -1,0 +1,184 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- ===== 应用 ===== -->
+    <sys:String x:Key="L.App.Title">过流脱扣试验台</sys:String>
+    <sys:String x:Key="L.App.Subtitle">工业控制与数据采集系统</sys:String>
+    <sys:String x:Key="L.App.Version">版本 1.0.0</sys:String>
+
+    <!-- ===== 窗口 ===== -->
+    <sys:String x:Key="L.Window.Minimize">最小化</sys:String>
+    <sys:String x:Key="L.Window.Close">关闭</sys:String>
+
+    <!-- ===== 登录 ===== -->
+    <sys:String x:Key="L.Login.Welcome">欢迎登录</sys:String>
+    <sys:String x:Key="L.Login.Subtitle">请输入账户信息以进入控制系统</sys:String>
+    <sys:String x:Key="L.Login.UserName">用户名</sys:String>
+    <sys:String x:Key="L.Login.Password">密码</sys:String>
+    <sys:String x:Key="L.Login.Button">登 录</sys:String>
+    <sys:String x:Key="L.Login.Error">用户名或密码错误</sys:String>
+    <sys:String x:Key="L.Login.Hint">默认账户：admin / 123456</sys:String>
+    <sys:String x:Key="L.Login.EmptyUser">请输入用户名</sys:String>
+    <sys:String x:Key="L.Login.EmptyPassword">请输入密码</sys:String>
+
+    <!-- ===== 主界面 ===== -->
+    <sys:String x:Key="L.Header.PlcConnected">PLC 已连接</sys:String>
+    <sys:String x:Key="L.Header.PlcDisconnected">PLC 未连接</sys:String>
+    <sys:String x:Key="L.Header.PlcConnecting">正在连接</sys:String>
+    <sys:String x:Key="L.Header.Settings">通讯设置</sys:String>
+    <sys:String x:Key="L.Header.WorkState">工作状态</sys:String>
+    <sys:String x:Key="L.Header.AlarmState">告警状态</sys:String>
+    <sys:String x:Key="L.Header.EmergencyState">急停状态</sys:String>
+    <sys:String x:Key="L.Header.Log">日志</sys:String>
+    <sys:String x:Key="L.Header.Logout">退出登录</sys:String>
+    <sys:String x:Key="L.Header.Operator">操作员</sys:String>
+
+    <sys:String x:Key="L.Section.Params">试验参数</sys:String>
+    <sys:String x:Key="L.Section.Chart">电流曲线</sys:String>
+    <sys:String x:Key="L.Section.Readout">实时数据</sys:String>
+
+    <sys:String x:Key="L.Field.ProductName">产品名称</sys:String>
+    <sys:String x:Key="L.Field.ProductCode">产品编号</sys:String>
+    <sys:String x:Key="L.Field.Tester">试验员</sys:String>
+    <sys:String x:Key="L.Field.SetCurrent">设定电流</sys:String>
+    <sys:String x:Key="L.Field.SetTime">设定时间</sys:String>
+    <sys:String x:Key="L.Field.Station">试验工位</sys:String>
+    <sys:String x:Key="L.Field.StationN">工位 {0}</sys:String>
+
+    <sys:String x:Key="L.Unit.Ka">kA</sys:String>
+    <sys:String x:Key="L.Unit.Second">s</sys:String>
+
+    <sys:String x:Key="L.Readout.RealtimeCurrent">实时电流</sys:String>
+    <sys:String x:Key="L.Readout.Countdown">输出倒计时</sys:String>
+    <sys:String x:Key="L.Readout.TripCurrent">脱扣电流</sys:String>
+    <sys:String x:Key="L.Readout.RunTime">运行时间</sys:String>
+    <sys:String x:Key="L.Readout.PeakCurrent">峰值电流</sys:String>
+    <sys:String x:Key="L.Readout.Status">当前状态</sys:String>
+
+    <sys:String x:Key="L.Status.Idle">待机</sys:String>
+    <sys:String x:Key="L.Status.Charging">电容充电中</sys:String>
+    <sys:String x:Key="L.Status.Ready">充电完成 · 就绪</sys:String>
+    <sys:String x:Key="L.Status.Testing">测试进行中</sys:String>
+    <sys:String x:Key="L.Status.Completed">测试完成</sys:String>
+    <sys:String x:Key="L.Status.Stopped">已停止</sys:String>
+    <sys:String x:Key="L.Status.Alarm">设备告警</sys:String>
+    <sys:String x:Key="L.Status.Emergency">急停</sys:String>
+
+    <sys:String x:Key="L.Button.Charge">电容充电</sys:String>
+    <sys:String x:Key="L.Button.Start">开始测试</sys:String>
+    <sys:String x:Key="L.Button.Stop">停止测试</sys:String>
+    <sys:String x:Key="L.Button.Save">保存数据</sys:String>
+    <sys:String x:Key="L.Button.History">历史记录</sys:String>
+    <sys:String x:Key="L.Button.Back">返回主界面</sys:String>
+    <sys:String x:Key="L.Button.Search">查询</sys:String>
+    <sys:String x:Key="L.Button.Reset">重置</sys:String>
+    <sys:String x:Key="L.Button.Export">导出 CSV</sys:String>
+    <sys:String x:Key="L.Button.ExportExcel">导出 Excel</sys:String>
+    <sys:String x:Key="L.Button.Print">打印</sys:String>
+    <sys:String x:Key="L.Button.ViewChart">查看</sys:String>
+    <sys:String x:Key="L.Button.Confirm">确定</sys:String>
+    <sys:String x:Key="L.Button.Cancel">取消</sys:String>
+    <sys:String x:Key="L.Button.Apply">应用并重连</sys:String>
+    <sys:String x:Key="L.Button.TestConnection">测试连接</sys:String>
+
+    <!-- ===== 提示 ===== -->
+    <sys:String x:Key="L.Msg.ConfirmTitle">操作确认</sys:String>
+    <sys:String x:Key="L.Msg.ConfirmCharge">确认对电容进行充电？请确认现场人员已撤离、防护门已关闭。</sys:String>
+    <sys:String x:Key="L.Msg.ConfirmStart">确认开始测试？测试过程中禁止打开防护门或触碰主回路。</sys:String>
+    <sys:String x:Key="L.Msg.ConfirmStop">确认停止当前测试并断开输出？</sys:String>
+    <sys:String x:Key="L.Msg.ConfirmLogout">确认退出当前账户并返回登录界面？</sys:String>
+    <sys:String x:Key="L.Msg.ConfirmStopShutdown">测试正在进行，关闭软件将停止输出并断开主回路，确认退出？</sys:String>
+    <sys:String x:Key="L.Msg.ConfirmExit">确认退出程序？</sys:String>
+    <sys:String x:Key="L.Msg.ValidationTitle">输入校验</sys:String>
+    <sys:String x:Key="L.Msg.ValidationProductName">请输入产品名称</sys:String>
+    <sys:String x:Key="L.Msg.ValidationProductCode">请输入产品编号</sys:String>
+    <sys:String x:Key="L.Msg.ValidationTester">请输入试验员</sys:String>
+    <sys:String x:Key="L.Msg.ValidationCurrent">设定电流须为 0.1 ~ 100 kA 之间的数字</sys:String>
+    <sys:String x:Key="L.Msg.ValidationTime">设定时间须为 0.1 ~ 600 s 之间的数字</sys:String>
+    <sys:String x:Key="L.Msg.Saved">试验记录已保存</sys:String>
+    <sys:String x:Key="L.Msg.SavedFile">当前试验数据已保存到：{0}</sys:String>
+    <sys:String x:Key="L.Msg.SavedDb">当前试验数据已保存到数据库（含曲线截图）</sys:String>
+    <sys:String x:Key="L.Msg.SavedDbNoChart">当前试验数据已保存到数据库</sys:String>
+    <sys:String x:Key="L.Msg.SaveFailed">保存失败：{0}</sys:String>
+    <sys:String x:Key="L.Msg.OperationFailed">操作失败：{0}</sys:String>
+    <sys:String x:Key="L.Msg.NoDataToSave">暂无可保存的试验数据，请先完成一次测试</sys:String>
+    <sys:String x:Key="L.Msg.NoPlc">PLC 未连接，控制操作已被阻止</sys:String>
+    <sys:String x:Key="L.Msg.ChargeFirst">请先完成电容充电</sys:String>
+    <sys:String x:Key="L.Msg.AlarmActive">存在告警或急停信号，禁止启动测试</sys:String>
+    <sys:String x:Key="L.Msg.ConnectionOk">PLC 连接成功</sys:String>
+    <sys:String x:Key="L.Msg.ConnectionFail">PLC 连接失败：{0}</sys:String>
+    <sys:String x:Key="L.Msg.Completed">测试完成，脱扣电流 {0:F3} kA</sys:String>
+    <sys:String x:Key="L.Msg.Pass">合格</sys:String>
+    <sys:String x:Key="L.Msg.Fail">不合格</sys:String>
+    <sys:String x:Key="L.Msg.Emergency">急停信号触发，设备已停止</sys:String>
+    <sys:String x:Key="L.Msg.Alarm">设备告警，请检查 PLC 报警信息</sys:String>
+    <sys:String x:Key="L.Msg.Stopped">测试已停止</sys:String>
+    <sys:String x:Key="L.Msg.ChargeTimeout">电容充电超时（20 秒未收到充电完成信号），已断开主回路，请检查充电回路</sys:String>
+    <sys:String x:Key="L.Msg.Exported">已导出到：{0}</sys:String>
+    <sys:String x:Key="L.Msg.ExportFailed">导出失败：{0}</sys:String>
+    <sys:String x:Key="L.Msg.NoExportData">没有可导出的记录</sys:String>
+    <sys:String x:Key="L.Msg.ExportedExcel">已导出 Excel：{0}</sys:String>
+    <sys:String x:Key="L.Dialog.SaveExcel">导出 Excel</sys:String>
+    <sys:String x:Key="L.Dialog.ExcelFilter">Excel 工作簿 (*.xlsx)|*.xlsx</sys:String>
+    <sys:String x:Key="L.Msg.PrintDone">已发送到打印机</sys:String>
+    <sys:String x:Key="L.Msg.PrintFailed">打印失败：{0}</sys:String>
+    <sys:String x:Key="L.Msg.NoChartImage">该记录未保存曲线截图</sys:String>
+
+    <!-- 打印报表 -->
+    <sys:String x:Key="L.Print.Title">过流脱扣试验记录</sys:String>
+    <sys:String x:Key="L.Print.Subtitle">共 {0} 条记录，打印时间 {1}</sys:String>
+    <sys:String x:Key="L.Msg.Testing">测试进行中，请稍候</sys:String>
+
+    <!-- ===== 数据查询 ===== -->
+    <sys:String x:Key="L.History.Title">试验数据查询</sys:String>
+    <sys:String x:Key="L.History.Subtitle">按时间范围与产品信息检索历史试验记录</sys:String>
+    <sys:String x:Key="L.History.Total">总记录</sys:String>
+    <sys:String x:Key="L.History.Passed">合格</sys:String>
+    <sys:String x:Key="L.History.Failed">不合格</sys:String>
+    <sys:String x:Key="L.History.Range">时间范围</sys:String>
+    <sys:String x:Key="L.History.Range.All">全部</sys:String>
+    <sys:String x:Key="L.History.Range.Today">今天</sys:String>
+    <sys:String x:Key="L.History.Range.Week">近 7 天</sys:String>
+    <sys:String x:Key="L.History.Range.Month">近 30 天</sys:String>
+    <sys:String x:Key="L.History.Keyword">关键字</sys:String>
+    <sys:String x:Key="L.History.KeywordHint">产品名称 / 产品编号 / 试验员</sys:String>
+    <sys:String x:Key="L.History.Col.Index">序号</sys:String>
+    <sys:String x:Key="L.History.Col.Time">测试时间</sys:String>
+    <sys:String x:Key="L.History.Col.ProductName">产品名称</sys:String>
+    <sys:String x:Key="L.History.Col.ProductCode">产品编号</sys:String>
+    <sys:String x:Key="L.History.Col.Tester">试验员</sys:String>
+    <sys:String x:Key="L.History.Col.Station">工位</sys:String>
+    <sys:String x:Key="L.History.Col.SetCurrent">设定电流 (kA)</sys:String>
+    <sys:String x:Key="L.History.Col.SetTime">设定时间 (s)</sys:String>
+    <sys:String x:Key="L.History.Col.TripCurrent">脱扣电流 (kA)</sys:String>
+    <sys:String x:Key="L.History.Col.RunTime">运行时间 (s)</sys:String>
+    <sys:String x:Key="L.History.Col.Result">结果</sys:String>
+    <sys:String x:Key="L.History.Col.Chart">曲线图</sys:String>
+    <sys:String x:Key="L.History.SheetName">试验记录</sys:String>
+
+    <!-- 当前试验数据保存为本地文件时使用的标签 -->
+    <sys:String x:Key="L.Data.FilePrefix">试验数据</sys:String>
+    <sys:String x:Key="L.Data.ColTime">时间 (s)</sys:String>
+    <sys:String x:Key="L.Data.ColCurrent">电流 (kA)</sys:String>
+    <sys:String x:Key="L.History.Empty">暂无符合条件的试验记录</sys:String>
+
+    <!-- ===== 通讯设置 ===== -->
+    <sys:String x:Key="L.Settings.Title">PLC 通讯设置</sys:String>
+    <sys:String x:Key="L.Settings.Ip">PLC IP 地址</sys:String>
+    <sys:String x:Key="L.Settings.Port">端口</sys:String>
+    <sys:String x:Key="L.Settings.Poll">轮询周期 (ms)</sys:String>
+    <sys:String x:Key="L.Settings.Protocol">Modbus TCP（汇川 EASY320）</sys:String>
+    <sys:String x:Key="L.Settings.UnitId">从站号</sys:String>
+    <sys:String x:Key="L.Settings.Saved">通讯设置已保存，正在重新连接…</sys:String>
+    <sys:String x:Key="L.Settings.Testing">正在测试连接…</sys:String>
+    <sys:String x:Key="L.Settings.InvalidIp">IP 地址格式不正确</sys:String>
+    <sys:String x:Key="L.Settings.InvalidPort">端口须为 1 ~ 65535</sys:String>
+
+    <!-- ===== 曲线 ===== -->
+    <sys:String x:Key="L.Chart.NoData">等待采集数据…</sys:String>
+    <sys:String x:Key="L.Chart.CurrentAxis">电流 (kA)</sys:String>
+    <sys:String x:Key="L.Chart.TimeAxis">时间 (s)</sys:String>
+    <sys:String x:Key="L.Chart.Window">最近 {0} 秒</sys:String>
+
+</ResourceDictionary>

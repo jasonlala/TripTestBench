@@ -1,0 +1,69 @@
+<Window x:Class="TripTestBench.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="过流脱扣试验台"
+        Icon="Assets/app.ico"
+        Width="1600"
+        Height="900"
+        MinWidth="1280"
+        MinHeight="760"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource B.WindowBg}"
+        FontFamily="Microsoft YaHei UI"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Ideal">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="0"
+                            ResizeBorderThickness="6"
+                            GlassFrameThickness="0"
+                            CornerRadius="0"
+                            UseAeroCaptionButtons="False" />
+    </shell:WindowChrome.WindowChrome>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="38" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 自定义窗口标题栏 -->
+        <Border Grid.Row="0"
+                Background="#FF050A11"
+                BorderBrush="#FF16222F"
+                BorderThickness="0,0,0,1"
+                MouseLeftButtonDown="TitleBar_OnMouseLeftButtonDown">
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
+                    <Border Width="7" Height="7" CornerRadius="4" Background="{StaticResource B.Accent}" />
+                    <TextBlock Text="{DynamicResource L.App.Title}"
+                               FontSize="12"
+                               Foreground="{StaticResource B.TextMuted}"
+                               Margin="8,0,0,0" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0">
+                    <Button x:Name="LanguageButton"
+                            Content="EN"
+                            Style="{StaticResource LangButton}"
+                            Click="LanguageButton_OnClick" />
+                    <Button Content="—"
+                            Style="{StaticResource IconButton}"
+                            Margin="8,0,0,0"
+                            ToolTip="{DynamicResource L.Window.Minimize}"
+                            Click="Minimize_OnClick" />
+                    <Button Content="×"
+                            Style="{StaticResource CloseButton}"
+                            FontSize="16"
+                            ToolTip="{DynamicResource L.Window.Close}"
+                            Click="Close_OnClick" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <ContentControl Grid.Row="1" x:Name="RootContent" />
+    </Grid>
+</Window>

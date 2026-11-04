@@ -1,0 +1,184 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- ===== Application ===== -->
+    <sys:String x:Key="L.App.Title">Over-Current Trip Test Bench</sys:String>
+    <sys:String x:Key="L.App.Subtitle">Industrial Control &amp; Data Acquisition System</sys:String>
+    <sys:String x:Key="L.App.Version">Version 1.0.0</sys:String>
+
+    <!-- ===== Window ===== -->
+    <sys:String x:Key="L.Window.Minimize">Minimize</sys:String>
+    <sys:String x:Key="L.Window.Close">Close</sys:String>
+
+    <!-- ===== Login ===== -->
+    <sys:String x:Key="L.Login.Welcome">Welcome</sys:String>
+    <sys:String x:Key="L.Login.Subtitle">Sign in to access the control system</sys:String>
+    <sys:String x:Key="L.Login.UserName">User Name</sys:String>
+    <sys:String x:Key="L.Login.Password">Password</sys:String>
+    <sys:String x:Key="L.Login.Button">SIGN IN</sys:String>
+    <sys:String x:Key="L.Login.Error">Invalid user name or password</sys:String>
+    <sys:String x:Key="L.Login.Hint">Default account: admin / 123456</sys:String>
+    <sys:String x:Key="L.Login.EmptyUser">Please enter user name</sys:String>
+    <sys:String x:Key="L.Login.EmptyPassword">Please enter password</sys:String>
+
+    <!-- ===== Main ===== -->
+    <sys:String x:Key="L.Header.PlcConnected">PLC Connected</sys:String>
+    <sys:String x:Key="L.Header.PlcDisconnected">PLC Disconnected</sys:String>
+    <sys:String x:Key="L.Header.PlcConnecting">Connecting</sys:String>
+    <sys:String x:Key="L.Header.Settings">Comm Settings</sys:String>
+    <sys:String x:Key="L.Header.WorkState">Working</sys:String>
+    <sys:String x:Key="L.Header.AlarmState">Alarm</sys:String>
+    <sys:String x:Key="L.Header.EmergencyState">E-Stop</sys:String>
+    <sys:String x:Key="L.Header.Log">Logs</sys:String>
+    <sys:String x:Key="L.Header.Logout">Sign Out</sys:String>
+    <sys:String x:Key="L.Header.Operator">Operator</sys:String>
+
+    <sys:String x:Key="L.Section.Params">Test Parameters</sys:String>
+    <sys:String x:Key="L.Section.Chart">Current Curve</sys:String>
+    <sys:String x:Key="L.Section.Readout">Live Data</sys:String>
+
+    <sys:String x:Key="L.Field.ProductName">Product Name</sys:String>
+    <sys:String x:Key="L.Field.ProductCode">Product Code</sys:String>
+    <sys:String x:Key="L.Field.Tester">Tester</sys:String>
+    <sys:String x:Key="L.Field.SetCurrent">Set Current</sys:String>
+    <sys:String x:Key="L.Field.SetTime">Set Time</sys:String>
+    <sys:String x:Key="L.Field.Station">Station</sys:String>
+    <sys:String x:Key="L.Field.StationN">Sta. {0}</sys:String>
+
+    <sys:String x:Key="L.Unit.Ka">kA</sys:String>
+    <sys:String x:Key="L.Unit.Second">s</sys:String>
+
+    <sys:String x:Key="L.Readout.RealtimeCurrent">Live Current</sys:String>
+    <sys:String x:Key="L.Readout.Countdown">Output Countdown</sys:String>
+    <sys:String x:Key="L.Readout.TripCurrent">Trip Current</sys:String>
+    <sys:String x:Key="L.Readout.RunTime">Run Time</sys:String>
+    <sys:String x:Key="L.Readout.PeakCurrent">Peak Current</sys:String>
+    <sys:String x:Key="L.Readout.Status">Status</sys:String>
+
+    <sys:String x:Key="L.Status.Idle">Standby</sys:String>
+    <sys:String x:Key="L.Status.Charging">Charging</sys:String>
+    <sys:String x:Key="L.Status.Ready">Charged · Ready</sys:String>
+    <sys:String x:Key="L.Status.Testing">Testing</sys:String>
+    <sys:String x:Key="L.Status.Completed">Completed</sys:String>
+    <sys:String x:Key="L.Status.Stopped">Stopped</sys:String>
+    <sys:String x:Key="L.Status.Alarm">Alarm</sys:String>
+    <sys:String x:Key="L.Status.Emergency">E-Stop</sys:String>
+
+    <sys:String x:Key="L.Button.Charge">Charge</sys:String>
+    <sys:String x:Key="L.Button.Start">START TEST</sys:String>
+    <sys:String x:Key="L.Button.Stop">STOP</sys:String>
+    <sys:String x:Key="L.Button.Save">Save Data</sys:String>
+    <sys:String x:Key="L.Button.History">History</sys:String>
+    <sys:String x:Key="L.Button.Back">Back to Main</sys:String>
+    <sys:String x:Key="L.Button.Search">Search</sys:String>
+    <sys:String x:Key="L.Button.Reset">Reset</sys:String>
+    <sys:String x:Key="L.Button.Export">Export CSV</sys:String>
+    <sys:String x:Key="L.Button.ExportExcel">Export Excel</sys:String>
+    <sys:String x:Key="L.Button.Print">Print</sys:String>
+    <sys:String x:Key="L.Button.ViewChart">View</sys:String>
+    <sys:String x:Key="L.Button.Confirm">OK</sys:String>
+    <sys:String x:Key="L.Button.Cancel">Cancel</sys:String>
+    <sys:String x:Key="L.Button.Apply">Apply &amp; Reconnect</sys:String>
+    <sys:String x:Key="L.Button.TestConnection">Test</sys:String>
+
+    <!-- ===== Messages ===== -->
+    <sys:String x:Key="L.Msg.ConfirmTitle">Confirmation</sys:String>
+    <sys:String x:Key="L.Msg.ConfirmCharge">Charge the capacitor? Make sure personnel are clear and the guard door is closed.</sys:String>
+    <sys:String x:Key="L.Msg.ConfirmStart">Start the test? Do not open the guard door or touch the main circuit during testing.</sys:String>
+    <sys:String x:Key="L.Msg.ConfirmStop">Stop the current test and disconnect the output?</sys:String>
+    <sys:String x:Key="L.Msg.ConfirmLogout">Sign out and return to the login screen?</sys:String>
+    <sys:String x:Key="L.Msg.ConfirmStopShutdown">A test is running. Closing the application will stop the output and open the main circuit. Exit anyway?</sys:String>
+    <sys:String x:Key="L.Msg.ConfirmExit">Exit the application?</sys:String>
+    <sys:String x:Key="L.Msg.ValidationTitle">Validation</sys:String>
+    <sys:String x:Key="L.Msg.ValidationProductName">Please enter product name</sys:String>
+    <sys:String x:Key="L.Msg.ValidationProductCode">Please enter product code</sys:String>
+    <sys:String x:Key="L.Msg.ValidationTester">Please enter tester</sys:String>
+    <sys:String x:Key="L.Msg.ValidationCurrent">Set current must be a number between 0.1 and 100 kA</sys:String>
+    <sys:String x:Key="L.Msg.ValidationTime">Set time must be a number between 0.1 and 600 s</sys:String>
+    <sys:String x:Key="L.Msg.Saved">Test record saved</sys:String>
+    <sys:String x:Key="L.Msg.SavedFile">Current test data saved to: {0}</sys:String>
+    <sys:String x:Key="L.Msg.SavedDb">Current test data saved to database (with chart image)</sys:String>
+    <sys:String x:Key="L.Msg.SavedDbNoChart">Current test data saved to database</sys:String>
+    <sys:String x:Key="L.Msg.SaveFailed">Save failed: {0}</sys:String>
+    <sys:String x:Key="L.Msg.OperationFailed">Operation failed: {0}</sys:String>
+    <sys:String x:Key="L.Msg.NoDataToSave">No test data to save. Run a test first.</sys:String>
+    <sys:String x:Key="L.Msg.NoPlc">PLC is not connected. Control operation blocked.</sys:String>
+    <sys:String x:Key="L.Msg.ChargeFirst">Please charge the capacitor first</sys:String>
+    <sys:String x:Key="L.Msg.AlarmActive">Alarm or E-Stop is active. Test start blocked.</sys:String>
+    <sys:String x:Key="L.Msg.ConnectionOk">PLC connected</sys:String>
+    <sys:String x:Key="L.Msg.ConnectionFail">PLC connection failed: {0}</sys:String>
+    <sys:String x:Key="L.Msg.Completed">Test completed, trip current {0:F3} kA</sys:String>
+    <sys:String x:Key="L.Msg.Pass">PASS</sys:String>
+    <sys:String x:Key="L.Msg.Fail">FAIL</sys:String>
+    <sys:String x:Key="L.Msg.Emergency">E-Stop triggered. Equipment stopped.</sys:String>
+    <sys:String x:Key="L.Msg.Alarm">Equipment alarm. Check the PLC alarm details.</sys:String>
+    <sys:String x:Key="L.Msg.Stopped">Test stopped</sys:String>
+    <sys:String x:Key="L.Msg.ChargeTimeout">Charge timeout (no X10 signal within 20 s). Main circuit opened. Check the charging circuit.</sys:String>
+    <sys:String x:Key="L.Msg.Exported">Exported to: {0}</sys:String>
+    <sys:String x:Key="L.Msg.ExportFailed">Export failed: {0}</sys:String>
+    <sys:String x:Key="L.Msg.NoExportData">No records to export</sys:String>
+    <sys:String x:Key="L.Msg.ExportedExcel">Excel exported: {0}</sys:String>
+    <sys:String x:Key="L.Dialog.SaveExcel">Export to Excel</sys:String>
+    <sys:String x:Key="L.Dialog.ExcelFilter">Excel Workbook (*.xlsx)|*.xlsx</sys:String>
+    <sys:String x:Key="L.Msg.PrintDone">Sent to printer</sys:String>
+    <sys:String x:Key="L.Msg.PrintFailed">Print failed: {0}</sys:String>
+    <sys:String x:Key="L.Msg.NoChartImage">No chart image stored for this record</sys:String>
+
+    <!-- Print report -->
+    <sys:String x:Key="L.Print.Title">Over-current Trip Test Records</sys:String>
+    <sys:String x:Key="L.Print.Subtitle">{0} record(s), printed at {1}</sys:String>
+    <sys:String x:Key="L.Msg.Testing">Testing in progress, please wait</sys:String>
+
+    <!-- ===== History ===== -->
+    <sys:String x:Key="L.History.Title">Test Data Query</sys:String>
+    <sys:String x:Key="L.History.Subtitle">Search historical test records by date range and product info</sys:String>
+    <sys:String x:Key="L.History.Total">Total</sys:String>
+    <sys:String x:Key="L.History.Passed">Passed</sys:String>
+    <sys:String x:Key="L.History.Failed">Failed</sys:String>
+    <sys:String x:Key="L.History.Range">Date Range</sys:String>
+    <sys:String x:Key="L.History.Range.All">All</sys:String>
+    <sys:String x:Key="L.History.Range.Today">Today</sys:String>
+    <sys:String x:Key="L.History.Range.Week">7 Days</sys:String>
+    <sys:String x:Key="L.History.Range.Month">30 Days</sys:String>
+    <sys:String x:Key="L.History.Keyword">Keyword</sys:String>
+    <sys:String x:Key="L.History.KeywordHint">Product name / code / tester</sys:String>
+    <sys:String x:Key="L.History.Col.Index">No.</sys:String>
+    <sys:String x:Key="L.History.Col.Time">Test Time</sys:String>
+    <sys:String x:Key="L.History.Col.ProductName">Product Name</sys:String>
+    <sys:String x:Key="L.History.Col.ProductCode">Product Code</sys:String>
+    <sys:String x:Key="L.History.Col.Tester">Tester</sys:String>
+    <sys:String x:Key="L.History.Col.Station">Sta.</sys:String>
+    <sys:String x:Key="L.History.Col.SetCurrent">Set Current (kA)</sys:String>
+    <sys:String x:Key="L.History.Col.SetTime">Set Time (s)</sys:String>
+    <sys:String x:Key="L.History.Col.TripCurrent">Trip Current (kA)</sys:String>
+    <sys:String x:Key="L.History.Col.RunTime">Run Time (s)</sys:String>
+    <sys:String x:Key="L.History.Col.Result">Result</sys:String>
+    <sys:String x:Key="L.History.Col.Chart">Chart</sys:String>
+    <sys:String x:Key="L.History.SheetName">Test Records</sys:String>
+
+    <!-- Labels used when saving the current test data to a local file -->
+    <sys:String x:Key="L.Data.FilePrefix">TestData</sys:String>
+    <sys:String x:Key="L.Data.ColTime">Time (s)</sys:String>
+    <sys:String x:Key="L.Data.ColCurrent">Current (kA)</sys:String>
+    <sys:String x:Key="L.History.Empty">No matching test records</sys:String>
+
+    <!-- ===== Settings ===== -->
+    <sys:String x:Key="L.Settings.Title">PLC Communication Settings</sys:String>
+    <sys:String x:Key="L.Settings.Ip">PLC IP Address</sys:String>
+    <sys:String x:Key="L.Settings.Port">Port</sys:String>
+    <sys:String x:Key="L.Settings.Poll">Poll Interval (ms)</sys:String>
+    <sys:String x:Key="L.Settings.Protocol">Modbus TCP (Inovance EASY320)</sys:String>
+    <sys:String x:Key="L.Settings.UnitId">Unit ID</sys:String>
+    <sys:String x:Key="L.Settings.Saved">Settings saved, reconnecting…</sys:String>
+    <sys:String x:Key="L.Settings.Testing">Testing connection…</sys:String>
+    <sys:String x:Key="L.Settings.InvalidIp">Invalid IP address</sys:String>
+    <sys:String x:Key="L.Settings.InvalidPort">Port must be between 1 and 65535</sys:String>
+
+    <!-- ===== Chart ===== -->
+    <sys:String x:Key="L.Chart.NoData">Waiting for data…</sys:String>
+    <sys:String x:Key="L.Chart.CurrentAxis">Current (kA)</sys:String>
+    <sys:String x:Key="L.Chart.TimeAxis">Time (s)</sys:String>
+    <sys:String x:Key="L.Chart.Window">Last {0} s</sys:String>
+
+</ResourceDictionary>
