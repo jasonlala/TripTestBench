@@ -171,19 +171,21 @@ public sealed class ModbusPlcService : IPlcService
         {
             var client = _client ?? throw new ModbusException("PLC 未连接");
 
-            // D1520 连续读取 81 个寄存器，一次覆盖实时电流(1520) / 脱扣电流(1550) / 运行时间(1600)
-            var words = client.ReadHoldingRegisters(PlcPoints.D_RealtimeCurrent, 81);
+            // D1520 连续读取 82 个寄存器：实时电流 D1520(int32) / 脱扣电流 D1550 / 运行时间 D1600(int32)
+            var words = client.ReadHoldingRegisters(PlcPoints.D_RealtimeCurrent, 82);
 
             // M0 ~ M80：主回路、开始、停止、完成等标志
             var m = client.ReadCoils(PlcPoints.M_MainCircuit, 81);
 
-            // X0 ~ X16：急停、告警、充电完成
-            var x = client.ReadDiscreteInputs(PlcPoints.X_Emergency, 17);
+            // X0 ~ X16：急停、充电完成（X 区 Modbus 起始地址 63488）
+            var x = client.ReadDiscreteInputs(PlcPoints.X_BaseAddress, 17);
 
-            // 寄存器原始值 ÷ 1000 还原工程量
-            var current = words[0] / PlcPoints.CurrentScale;
+            // 寄存器原始值 ÷ 1000 还原工程量（D1520 / D1600 为 32 位 int，合并高低字）
+            var current = ModbusTcpClient.ToInt32(words[0], words[1]) / PlcPoints.CurrentScale;
             var trip = words[PlcPoints.D_TripCurrent - PlcPoints.D_RealtimeCurrent] / PlcPoints.CurrentScale;
-            var runTime = words[PlcPoints.D_RunTime - PlcPoints.D_RealtimeCurrent] / PlcPoints.TimeScale;
+            var runTime = ModbusTcpClient.ToInt32(
+                words[PlcPoints.D_RunTime - PlcPoints.D_RealtimeCurrent],
+                words[PlcPoints.D_RunTime - PlcPoints.D_RealtimeCurrent + 1]) / PlcPoints.TimeScale;
 
             // 软件侧同步统计峰值（即使 PLC 未提供峰值寄存器）
             if (current > _peak)
@@ -200,9 +202,12 @@ public sealed class ModbusPlcService : IPlcService
                 RunTimeSeconds = runTime,
                 PeakCurrentKa = _peak,
                 Completed = m[PlcPoints.M_Completed],                     // M80 完成信号
-                ChargeComplete = x[PlcPoints.X_ChargeComplete],           // X16 充电完成
-                Alarm = x[PlcPoints.X_Alarm],                             // X1 告警
-                Emergency = !x[PlcPoints.X_Emergency],                    // X0 常闭触点：ON 正常 / OFF 急停按下
+                ChargeComplete = x[PlcPoints.X_ChargeComplete],           // X3 充电完成
+                // X4 ~ X7 为常闭告警触点：任一 OFF 即视为告警
+                Alarm = !(x[PlcPoints.X_AlarmStart] && x[PlcPoints.X_AlarmStart + 1]
+                          && x[PlcPoints.X_AlarmStart + 2] && x[PlcPoints.X_AlarmStart + 3]),
+                // X0 / X1 均为常闭急停触点：任一 OFF 即视为急停按下
+                Emergency = !x[PlcPoints.X_Emergency] || !x[PlcPoints.X_Emergency2],
                 Working = m[PlcPoints.M_MainCircuit],                     // M0 主回路
                 Timestamp = DateTime.Now
             };
@@ -220,21 +225,18 @@ public sealed class ModbusPlcService : IPlcService
     public Task WriteTestSettingsAsync(int station, double currentKa, double timeSeconds)
     {
         var (timeRegister, currentRegister) = PlcPoints.GetSettingRegisters(station);
-        var currentValue = ToRegisterValue(currentKa);
-        var timeValue = ToRegisterValue(timeSeconds);
+        var currentValue = ToRegisterValue(currentKa);   // int32（×1000，占 2 个寄存器）
+        var timeValue = ToRegisterValue(timeSeconds);    // int32（×1000，占 2 个寄存器）
 
         var description =
-            $"设定值 工位 {station}：电流 {currentKa:F3} kA → D{currentRegister}={currentValue}；"
-            + $"时间 {timeSeconds:F2} s → D{timeRegister}={timeValue}；"
-            + $"工位继电器 M{PlcPoints.M_SelectStation2}={OnOff(station == 2)}、"
-            + $"M{PlcPoints.M_SelectStation3}={OnOff(station == 3)}";
+            $"设定值 工位 {station}：电流 {currentKa:F3} kA → D{currentRegister}={currentValue}（int32）；"
+            + $"时间 {timeSeconds:F2} s → D{timeRegister}={timeValue}（int32）";
 
         return WriteAsync(client =>
         {
-            client.WriteRegister(timeRegister, timeValue);       // 设定时间
-            client.WriteRegister(currentRegister, currentValue); // 设定电流
-            client.WriteCoil(PlcPoints.M_SelectStation2, station == 2); // 工位 2
-            client.WriteCoil(PlcPoints.M_SelectStation3, station == 3); // 工位 3
+            // 设定时间 / 电流均为 32 位 int：按高低字拆分后用 0x10 写入连续两个寄存器
+            client.WriteRegisters(timeRegister, ModbusTcpClient.ToWords(timeValue));
+            client.WriteRegisters(currentRegister, ModbusTcpClient.ToWords(currentValue));
         }, description);
     }
 
@@ -244,40 +246,18 @@ public sealed class ModbusPlcService : IPlcService
         $"主回路 M{PlcPoints.M_MainCircuit} = {(on ? "ON（开始充电）" : "OFF（断开主回路）")}");
 
     /// <summary>
-    /// 开始测试脉冲：M1 置 ON，保持 120ms 后置 OFF。
-    /// PLC 侧检测到上升沿即启动试验流程。
+    /// 开始测试电平（M1）：电平模式，ON 启动 / OFF 撤销，不自动复位。
     /// </summary>
-    public async Task PulseStartAsync()
-    {
-        await WriteAsync(
-            client => client.WriteCoil(PlcPoints.M_StartTest, true),
-            $"开始脉冲 M{PlcPoints.M_StartTest} = ON").ConfigureAwait(false);
-
-        await Task.Delay(120).ConfigureAwait(false);
-
-        await WriteAsync(
-            client => client.WriteCoil(PlcPoints.M_StartTest, false),
-            $"开始脉冲 M{PlcPoints.M_StartTest} = OFF（脉冲宽 120 ms）").ConfigureAwait(false);
-    }
+    public Task SetStartTestAsync(bool on) => WriteAsync(
+        client => client.WriteCoil(PlcPoints.M_StartTest, on),
+        $"开始测试 M{PlcPoints.M_StartTest} = {OnOff(on)}（电平）");
 
     /// <summary>
-    /// 停止测试脉冲：先清 M1，再让 M3 置 ON 保持 120ms 后置 OFF。
-    /// 倒计时结束与手动停止都走这里，保证 PLC 侧收到统一的停止信号。
+    /// 停止测试电平（M3）：电平模式，ON 停止 / OFF 撤销，不自动复位。
     /// </summary>
-    public async Task PulseStopAsync()
-    {
-        await WriteAsync(client =>
-        {
-            client.WriteCoil(PlcPoints.M_StartTest, false);
-            client.WriteCoil(PlcPoints.M_StopTest, true);
-        }, $"停止脉冲 M{PlcPoints.M_StartTest} = OFF、M{PlcPoints.M_StopTest} = ON").ConfigureAwait(false);
-
-        await Task.Delay(120).ConfigureAwait(false);
-
-        await WriteAsync(
-            client => client.WriteCoil(PlcPoints.M_StopTest, false),
-            $"停止脉冲 M{PlcPoints.M_StopTest} = OFF（脉冲宽 120 ms）").ConfigureAwait(false);
-    }
+    public Task SetStopTestAsync(bool on) => WriteAsync(
+        client => client.WriteCoil(PlcPoints.M_StopTest, on),
+        $"停止测试 M{PlcPoints.M_StopTest} = {OnOff(on)}（电平）");
 
     /// <summary>清零软件侧峰值统计（每次开始测试前调用）。</summary>
     public void ResetPeak() => _peak = 0;
@@ -319,12 +299,9 @@ public sealed class ModbusPlcService : IPlcService
         }
     }
 
-    /// <summary>工程量 → 寄存器值：×1000 后四舍五入并限幅到 ushort 范围。</summary>
-    private static ushort ToRegisterValue(double value)
-    {
-        var raw = Math.Round(value * 1000d);
-        return (ushort)Math.Clamp(raw, 0, ushort.MaxValue);
-    }
+    /// <summary>工程量 → 寄存器值：×1000 后四舍五入为 32 位 int（D1000 / D1002 为 int 类型，占 2 个寄存器）。</summary>
+    private static int ToRegisterValue(double value)
+        => (int)Math.Round(value * 1000d);
 
     /// <summary>更新连接状态并通知订阅者（仅在状态变化时触发）。</summary>
     private void SetConnected(bool connected)

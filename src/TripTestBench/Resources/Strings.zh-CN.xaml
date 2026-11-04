@@ -62,7 +62,6 @@
     <sys:String x:Key="L.Status.Testing">测试进行中</sys:String>
     <sys:String x:Key="L.Status.Completed">测试完成</sys:String>
     <sys:String x:Key="L.Status.Stopped">已停止</sys:String>
-    <sys:String x:Key="L.Status.Alarm">设备告警</sys:String>
     <sys:String x:Key="L.Status.Emergency">急停</sys:String>
 
     <sys:String x:Key="L.Button.Charge">电容充电</sys:String>
@@ -105,16 +104,15 @@
     <sys:String x:Key="L.Msg.NoDataToSave">暂无可保存的试验数据，请先完成一次测试</sys:String>
     <sys:String x:Key="L.Msg.NoPlc">PLC 未连接，控制操作已被阻止</sys:String>
     <sys:String x:Key="L.Msg.ChargeFirst">请先完成电容充电</sys:String>
-    <sys:String x:Key="L.Msg.AlarmActive">存在告警或急停信号，禁止启动测试</sys:String>
+    <sys:String x:Key="L.Msg.AlarmActive">存在急停信号，禁止操作</sys:String>
     <sys:String x:Key="L.Msg.ConnectionOk">PLC 连接成功</sys:String>
     <sys:String x:Key="L.Msg.ConnectionFail">PLC 连接失败：{0}</sys:String>
     <sys:String x:Key="L.Msg.Completed">测试完成，脱扣电流 {0:F3} kA</sys:String>
     <sys:String x:Key="L.Msg.Pass">合格</sys:String>
     <sys:String x:Key="L.Msg.Fail">不合格</sys:String>
     <sys:String x:Key="L.Msg.Emergency">急停信号触发，设备已停止</sys:String>
-    <sys:String x:Key="L.Msg.Alarm">设备告警，请检查 PLC 报警信息</sys:String>
     <sys:String x:Key="L.Msg.Stopped">测试已停止</sys:String>
-    <sys:String x:Key="L.Msg.ChargeTimeout">电容充电超时（20 秒未收到充电完成信号），已断开主回路，请检查充电回路</sys:String>
+    <sys:String x:Key="L.Msg.ChargeTimeout">电容充电超时（40 秒未收到充电完成信号），已断开主回路，请检查充电回路</sys:String>
     <sys:String x:Key="L.Msg.Exported">已导出到：{0}</sys:String>
     <sys:String x:Key="L.Msg.ExportFailed">导出失败：{0}</sys:String>
     <sys:String x:Key="L.Msg.NoExportData">没有可导出的记录</sys:String>

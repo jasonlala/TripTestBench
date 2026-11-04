@@ -31,13 +31,15 @@ public sealed record PlcSnapshot
     /// <summary>完成信号 M80：PLC 判定本次试验已结束。</summary>
     public bool Completed { get; init; }
 
-    /// <summary>充电完成 X10：电容充电到位，允许开始测试。</summary>
+    /// <summary>充电完成 X3：电容充电到位，允许开始测试。</summary>
     public bool ChargeComplete { get; init; }
 
-    /// <summary>告警 X1：任一时刻为 ON 即视为告警（禁止充电 / 开始测试）。</summary>
+    /// <summary>告警 X4~X7（常闭触点）：任一为 OFF 即视为告警。</summary>
     public bool Alarm { get; init; }
 
-    /// <summary>急停 X0（常闭触点）：ON 正常，OFF 表示急停已按下，立即中止试验。</summary>
+    /// <summary>
+    /// 急停（常闭触点）：X0 / X1 任一为 OFF 即表示急停按下，立即中止试验。
+    /// </summary>
     public bool Emergency { get; init; }
 
     /// <summary>工作标志 M0：主回路是否处于输出状态。</summary>
@@ -53,7 +55,7 @@ public enum TestState
     /// <summary>待机：可充电、可查看历史。</summary>
     Idle,
 
-    /// <summary>充电中：主回路已合闸，等待充电完成信号 X10。</summary>
+    /// <summary>充电中：主回路已合闸，等待充电完成信号 X3。</summary>
     Charging,
 
     /// <summary>就绪：充电完成，可开始测试。</summary>
@@ -68,18 +70,15 @@ public enum TestState
     /// <summary>已停止：操作员手动停止或超时保护触发。</summary>
     Stopped,
 
-    /// <summary>报警：PLC 告警信号有效，禁止操作。</summary>
-    Alarm,
-
-    /// <summary>急停：安全回路动作，立即断流并锁定操作。</summary>
+    /// <summary>急停：安全回路动作（X0 / X1 任一断开），立即断流并锁定操作。</summary>
     Emergency
 }
 
 /// <summary>PLC 通讯参数（可写入 appsettings.json，现场可改）。</summary>
 public sealed class PlcOptions
 {
-    /// <summary>PLC IP 地址（汇川 EASY320 默认 192.168.1.10）。</summary>
-    public string Ip { get; set; } = "192.168.1.10";
+    /// <summary>PLC IP 地址（默认 192.168.1.88）。</summary>
+    public string Ip { get; set; } = "192.168.1.88";
 
     /// <summary>Modbus TCP 端口（标准 502）。</summary>
     public int Port { get; set; } = 502;
@@ -106,61 +105,64 @@ public sealed class PlcOptions
 public static class PlcPoints
 {
     // ---------------- 保持寄存器（D 区：0x03 读 / 0x06、0x10 写） ----------------
-    /// <summary>实时电流 D1520（值 ÷1000 = kA）。</summary>
+    /// <summary>实时电流 D1520（32 位 int，占 D1520~D1521，原始值 A，÷1000 = kA）。</summary>
     public const int D_RealtimeCurrent = 1520;
 
     /// <summary>脱扣电流 D1550（值 ÷1000 = kA）。</summary>
     public const int D_TripCurrent = 1550;
 
-    /// <summary>运行时间 D1600（值 ÷1000 = 秒）。</summary>
+    /// <summary>运行时间 D1600（32 位 int，占 D1600~D1601，原始值 ms，÷1000 = s）。</summary>
     public const int D_RunTime = 1600;
 
-    /// <summary>工位 1 设定时间 D1000。</summary>
+    /// <summary>工位 1 设定时间 D1000（32 位 int，占 D1000~D1001，写入值 = 秒 ×1000）。</summary>
     public const int D_SetTime1 = 1000;
 
-    /// <summary>工位 1 设定电流 D1002。</summary>
+    /// <summary>工位 1 设定电流 D1002（32 位 int，占 D1002~D1003，写入值 = kA ×1000）。</summary>
     public const int D_SetCurrent1 = 1002;
 
-    /// <summary>工位 2 设定时间 D1006。</summary>
+    /// <summary>工位 2 设定时间 D1006（32 位 int，占 D1006~D1007）。</summary>
     public const int D_SetTime2 = 1006;
 
-    /// <summary>工位 2 设定电流 D1008。</summary>
+    /// <summary>工位 2 设定电流 D1008（32 位 int，占 D1008~D1009）。</summary>
     public const int D_SetCurrent2 = 1008;
 
-    /// <summary>工位 3 设定时间 D1012。</summary>
+    /// <summary>工位 3 设定时间 D1012（32 位 int，占 D1012~D1013）。</summary>
     public const int D_SetTime3 = 1012;
 
-    /// <summary>工位 3 设定电流 D1014。</summary>
+    /// <summary>工位 3 设定电流 D1014（32 位 int，占 D1014~D1015）。</summary>
     public const int D_SetCurrent3 = 1014;
 
     // ---------------- 线圈（M 区：0x01 读 / 0x05、0x0F 写） ----------------
     /// <summary>主回路控制 M0：ON 启动 / OFF 停止。</summary>
     public const int M_MainCircuit = 0;
 
-    /// <summary>开始测试 M1：上升沿触发（脉冲 120ms）。</summary>
+    /// <summary>开始测试 M1：电平模式，ON 启动 / OFF 撤销。</summary>
     public const int M_StartTest = 1;
 
-    /// <summary>停止测试 M3：上升沿触发（脉冲 120ms）。</summary>
+    /// <summary>停止测试 M3：电平模式，ON 停止 / OFF 撤销。</summary>
     public const int M_StopTest = 3;
-
-    /// <summary>工位选择 M60：ON 表示选用工位 2。</summary>
-    public const int M_SelectStation2 = 60;
-
-    /// <summary>工位选择 M61：ON 表示选用工位 3。</summary>
-    public const int M_SelectStation3 = 61;
 
     /// <summary>完成信号 M80：PLC 判定本次试验完成。</summary>
     public const int M_Completed = 80;
 
-    // ---------------- 离散输入（X 区：0x02 只读；X10 即第 16 点） ----------------
+    // ---------------- 离散输入（X 区：0x02 只读，Modbus 起始地址 63488） ----------------
+    /// <summary>X 区 Modbus 起始地址：X0 → 63488，即离散输入地址 = 63488 + X 编号。</summary>
+    public const int X_BaseAddress = 63488;
+
     /// <summary>急停输入 X0（常闭触点）：ON 正常 / OFF 急停按下，按下时立即中止试验并锁定操作。</summary>
     public const int X_Emergency = 0;
 
-    /// <summary>告警输入 X1：ON 时禁止充电 / 开始测试。</summary>
-    public const int X_Alarm = 1;
+    /// <summary>急停输入 X1（常闭触点）：与 X0 并联，任一 OFF 即视为急停。</summary>
+    public const int X_Emergency2 = 1;
 
-    /// <summary>充电完成 X10（十六进制 0x10，即第 16 点）。</summary>
-    public const int X_ChargeComplete = 16;
+    /// <summary>告警输入起始 X4（常闭触点）：X4 ~ X7 共 4 点，任一 OFF 即视为告警。</summary>
+    public const int X_AlarmStart = 4;
+
+    /// <summary>告警输入点数：X4 ~ X7。</summary>
+    public const int X_AlarmCount = 4;
+
+    /// <summary>充电完成 X3（即第 3 点）。</summary>
+    public const int X_ChargeComplete = 3;
 
     // ---------------- 换算比例 ----------------
     /// <summary>电流比例：寄存器值 ÷1000 = kA。</summary>

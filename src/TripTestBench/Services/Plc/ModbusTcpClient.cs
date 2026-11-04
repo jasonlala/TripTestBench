@@ -3,7 +3,7 @@
 // 作用：Modbus TCP 主站（客户端）实现，面向汇川 EASY320。
 //       只封装项目用到的功能码：
 //         0x01 读线圈           —— M 区（主回路 / 启动 / 停止 / 完成标志）
-//         0x02 读离散输入       —— X 区（急停 / 告警 / 充电完成）
+//         0x02 读离散输入       —— X 区（急停 X0/X1 / 充电完成 X3）
 //         0x03 读保持寄存器     —— D 区（实时电流 / 脱扣电流 / 运行时间）
 //         0x05 写单个线圈       —— 单点控制（M0 / M1 / M3 等）
 //         0x06 写单个寄存器     —— 单个设定值
@@ -14,7 +14,7 @@
 // 地址约定（沿用现场点位表，不做 0/1 基换算）：
 //   · 保持寄存器地址 = D 编号（D1520 → 地址 1520）
 //   · 线圈地址       = M 编号（M0 → 地址 0）
-//   · 离散输入地址   = X 编号（X10 → 地址 16）
+//   · 离散输入地址   = 63488 + X 编号（X0 → 地址 63488，X3 → 地址 63491）
 // 说明：所有读写共用一把锁串行执行，保证一问一答不交叉（Modbus 本身是半双工请求应答）。
 // ============================================================================
 
@@ -98,6 +98,30 @@ public sealed class ModbusTcpClient : IDisposable
 
     /// <summary>读离散输入（功能码 0x02）：X 区，最多 2000 点。</summary>
     public bool[] ReadDiscreteInputs(int startAddress, int count) => ReadBits(0x02, startAddress, count);
+
+    // ---------------------------------------------------------------------
+    // 32 位 int 数据（占两个连续 16 位寄存器）
+    // ---------------------------------------------------------------------
+
+    /// <summary>
+    /// 32 位 int 的字序：false = 低字在前（地址小的寄存器是低 16 位，汇川默认）；
+    /// 若现场读出的数值明显异常（过大 / 为 0），把本值改为 true 再试。
+    /// </summary>
+    public static bool Int32HighWordFirst { get; set; } = false;
+
+    /// <summary>把 32 位 int 拆成两个 16 位字（按当前字序排列，地址小的在前）。</summary>
+    public static ushort[] ToWords(int value)
+    {
+        var low = (ushort)(value & 0xFFFF);
+        var high = (ushort)((value >> 16) & 0xFFFF);
+        return Int32HighWordFirst ? new[] { high, low } : new[] { low, high };
+    }
+
+    /// <summary>把两个连续寄存器字合并为 32 位 int（first = 地址小的字，second = 地址大的字）。</summary>
+    public static int ToInt32(ushort first, ushort second)
+        => Int32HighWordFirst
+            ? (first << 16) | second
+            : (second << 16) | first;
 
     // ---------------------------------------------------------------------
     // 写操作

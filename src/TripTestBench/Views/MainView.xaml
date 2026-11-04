@@ -97,7 +97,7 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- ============ 设备状态指示灯组：工作 M0 / 告警 X1 / 急停 X0 ============ -->
+                    <!-- ============ 设备状态指示灯组：工作 M0 / 告警 X4~X7 / 急停 X0·X1 ============ -->
                     <Border Style="{StaticResource CardAlt}" Padding="12,7" CornerRadius="18" Margin="10,0,0,0">
                         <StackPanel Orientation="Horizontal">
                             <!-- 工作状态：M0 = ON 亮绿 -->
@@ -114,7 +114,7 @@
                                            Foreground="{Binding WorkLampBrush}" />
                             </StackPanel>
 
-                            <!-- 告警状态：X1 = ON 亮橙 -->
+                            <!-- 告警状态：X4 ~ X7 任一断开 = 亮橙 -->
                             <StackPanel Orientation="Horizontal" Margin="14,0,0,0">
                                 <Grid Width="12" Height="12" VerticalAlignment="Center">
                                     <Ellipse Fill="{Binding AlarmLampBrush}" Opacity="0.20" />
@@ -128,7 +128,7 @@
                                            Foreground="{Binding AlarmLampBrush}" />
                             </StackPanel>
 
-                            <!-- 急停状态：X0 = ON 亮红 -->
+                            <!-- 急停状态：X0 / X1 任一急停 = 亮红 -->
                             <StackPanel Orientation="Horizontal" Margin="14,0,0,0">
                                 <Grid Width="12" Height="12" VerticalAlignment="Center">
                                     <Ellipse Fill="{Binding EmergencyLampBrush}" Opacity="0.20" />
@@ -354,14 +354,15 @@
 
                         <Border Grid.Row="1" Height="1" Background="{StaticResource B.Border}" Margin="0,14" />
 
+                        <!-- 运行时间：读取 D1600（ms ÷1000 = s），不做本地倒计时 -->
                         <StackPanel Grid.Row="2">
-                            <TextBlock Text="{DynamicResource L.Readout.Countdown}" Style="{StaticResource CaptionText}" />
+                            <TextBlock Text="{DynamicResource L.Readout.RunTime}" Style="{StaticResource CaptionText}" />
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <TextBlock Text="{Binding RemainingSeconds, StringFormat={}{0:F1}}"
+                                <TextBlock Text="{Binding RunTimeSeconds, StringFormat={}{0:F2}}"
                                            FontFamily="Consolas"
                                            FontSize="44"
                                            FontWeight="Bold"
-                                           Foreground="{StaticResource B.Warning}" />
+                                           Foreground="{StaticResource B.Accent}" />
                                 <TextBlock Text="{DynamicResource L.Unit.Second}"
                                            Style="{StaticResource UnitText}"
                                            FontSize="15"
@@ -422,42 +423,46 @@
             <!-- ===================== 操作按钮 ===================== -->
             <Grid Grid.Row="2" Margin="4,14,4,0">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" />
+
+                <!-- 中部：电容充电 / 开始测试 / 停止测试（同尺寸，窗口居中） -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button Content="{DynamicResource L.Button.Charge}"
                             Style="{StaticResource GhostButton}"
-                            Width="148"
+                            Width="160"
                             Height="54"
                             Command="{Binding ChargeCommand}" />
-                    <Button Content="{DynamicResource L.Button.Save}"
-                            Style="{StaticResource GhostButton}"
-                            Width="140"
-                            Height="54"
-                            Margin="12,0,0,0"
-                            Command="{Binding SaveCommand}" />
-                </StackPanel>
-
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
                     <Button Content="{DynamicResource L.Button.Start}"
                             Style="{StaticResource StartButton}"
-                            Width="220"
+                            Width="160"
+                            Height="54"
+                            Margin="12,0,0,0"
                             Command="{Binding StartCommand}" />
                     <Button Content="{DynamicResource L.Button.Stop}"
                             Style="{StaticResource StopButton}"
-                            Width="180"
-                            Margin="16,0,0,0"
+                            Width="160"
+                            Height="54"
+                            Margin="12,0,0,0"
                             Command="{Binding StopCommand}" />
                 </StackPanel>
 
-                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                <!-- 右侧：保存数据 / 历史记录 -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="{DynamicResource L.Button.Save}"
+                            Style="{StaticResource GhostButton}"
+                            Width="150"
+                            Height="54"
+                            Command="{Binding SaveCommand}" />
                     <Button Content="{DynamicResource L.Button.History}"
                             Style="{StaticResource GhostButton}"
                             Width="150"
                             Height="54"
+                            Margin="12,0,0,0"
                             Command="{Binding HistoryCommand}" />
                 </StackPanel>
             </Grid>

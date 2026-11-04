@@ -59,7 +59,11 @@ public sealed class UserService
             else
             {
                 CreateDefaultUsers();
+                return;
             }
+
+            // 兼容旧账户文件：确保 root 账户存在（已有 users.json 的现场升级后自动补充）
+            EnsureRootUser();
         }
         catch (Exception ex)
         {
@@ -122,22 +126,41 @@ public sealed class UserService
     public static string ComputeHash(string salt, string password)
         => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(salt + password)));
 
-    /// <summary>首次运行创建默认账户：admin / operator，初始密码均为 123456。</summary>
+    /// <summary>首次运行创建默认账户：root / admin / operator，初始密码均为 123456。</summary>
     private void CreateDefaultUsers()
     {
         _users.Clear();
+        _users.Add(CreateAccount("root", "超级管理员", "Admin", "123456"));
         _users.Add(CreateAccount("admin", "管理员", "Admin", "123456"));
         _users.Add(CreateAccount("operator", "操作员", "Operator", "123456"));
+        SaveUsers();
+        Logger.Info("已创建默认账户（root / admin / operator）");
+    }
 
+    /// <summary>确保 root 账户存在，旧账户文件缺少时自动补充并回写。</summary>
+    private void EnsureRootUser()
+    {
+        if (_users.Any(u => string.Equals(u.UserName, "root", StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        _users.Add(CreateAccount("root", "超级管理员", "Admin", "123456"));
+        SaveUsers();
+        Logger.Info("已补充默认 root 账户（初始密码 123456）");
+    }
+
+    /// <summary>把内存账户列表写回 users.json。</summary>
+    private void SaveUsers()
+    {
         try
         {
             AppPaths.EnsureDataDir();
             File.WriteAllText(AppPaths.UsersFile, JsonSerializer.Serialize(_users, JsonOptions));
-            Logger.Info("已创建默认账户（admin / operator）");
         }
         catch (Exception ex)
         {
-            Logger.Error("写入默认账户失败", ex);
+            Logger.Error("写入账户文件失败", ex);
         }
     }
 

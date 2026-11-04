@@ -32,3 +32,6 @@ packages/
 # OS
 Thumbs.db
 .DS_Store
+
+# 发布压缩包
+publish.zip

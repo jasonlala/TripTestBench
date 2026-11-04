@@ -36,11 +36,11 @@ public interface IPlcService : IDisposable
     /// <summary>主回路启动 / 停止（M0：ON 启动、OFF 停止）。</summary>
     Task SetMainCircuitAsync(bool on);
 
-    /// <summary>开始测试脉冲（M1 ON → 保持 120ms → OFF）。</summary>
-    Task PulseStartAsync();
+    /// <summary>开始测试电平（M1：ON 启动 / OFF 撤销，电平模式不自复位）。</summary>
+    Task SetStartTestAsync(bool on);
 
-    /// <summary>停止测试脉冲（M3 ON → 保持 120ms → OFF）。</summary>
-    Task PulseStopAsync();
+    /// <summary>停止测试电平（M3：ON 停止 / OFF 撤销，电平模式不自复位）。</summary>
+    Task SetStopTestAsync(bool on);
 
     /// <summary>清零峰值电流统计。</summary>
     void ResetPeak();

@@ -2,9 +2,9 @@
 // 文件：MainViewModel.cs
 // 作用：主界面（过流脱扣试验台）的全部业务逻辑与状态机。
 //       1) 与 PLC 通讯服务对接，负责“电容充电 / 开始测试 / 停止测试 / 保存记录”等操作；
-//       2) 维护试验状态机：待机 → 充电中 → 就绪 → 测试中 → 完成 / 停止 / 报警 / 急停；
+//       2) 维护试验状态机：待机 → 充电中 → 就绪 → 测试中 → 完成 / 停止 / 急停；
 //       3) 测试过程中每 1 秒从 PLC 寄存器取一个采样点绘制电流曲线；
-//       4) 输出倒计时归零时，自动向 PLC 下发“停止测试”命令（M3 脉冲 + M0 断开），
+//       4) 运行时间（D1600）归零时，自动向 PLC 下发“停止测试”命令（M3=ON + M0 断开），
 //          并生成本次试验记录，供操作员保存到历史数据库。
 // 说明：本类不直接操作任何控件，界面刷新全部依靠属性通知与数据绑定完成。
 // ============================================================================
@@ -68,8 +68,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private TestState _state = TestState.Idle;     // 当前试验状态
     private bool _plcConnected;                    // PLC 是否已连接（指示灯颜色依据）
 
-    private string _productName = string.Empty;    // 产品名称（操作员输入）
-    private string _productCode = string.Empty;    // 产品编号（操作员输入）
+    private string _productName = "测试样品";      // 产品名称（默认值，操作员可修改）
+    private string _productCode = "SP-0001";       // 产品编号（默认值，操作员可修改）
     private string _tester = string.Empty;         // 试验员（默认取登录账号）
     private string _setCurrentText = "10.000";     // 设定电流文本（kA）
     private string _setTimeText = "3.00";          // 设定时间文本（s）
@@ -90,6 +90,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     // ---------------------------------------------------------------------
     private double _lastChartSampleSeconds = double.NegativeInfinity; // 上一次采样时间（秒）
     private bool _countdownStopRequested;          // 倒计时归零后是否已下发停止命令（防重复）
+    private bool _sawRunTimeNonZero;               // 本次试验是否出现过非零运行时间（防止 D1600 初值为 0 时误判结束）
     private PlcSnapshot? _latestSnapshot;          // 最近一帧 PLC 数据（生成记录时取值）
     private bool _chartRecording;                  // 是否正在向图表记录数据（仅测试期间为 true）
     private readonly List<ChartSample> _lastRecordSamples = new(); // 最近一次试验的曲线快照（保存文件用）
@@ -98,10 +99,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     // 边沿检测：用于识别 PLC 信号的“上升沿”
     // ---------------------------------------------------------------------
     private bool _prevCompleted;                   // 上一帧完成信号（M80）
-    private bool _prevChargeComplete;              // 上一帧充电完成信号（X10）
+    private bool _prevChargeComplete;              // 上一帧充电完成信号（X3）
 
-    /// <summary>电容充电超时时间（秒）：超时未收到 X10 则断开主回路并提示。</summary>
-    private const double ChargeTimeoutSeconds = 20;
+    /// <summary>电容充电超时时间（秒）：超时未收到 X3 则断开主回路并提示。</summary>
+    private const double ChargeTimeoutSeconds = 40;
 
     /// <summary>本次充电的截止时刻（充电开始时设置；就绪 / 停止 / 超时后清空）。</summary>
     private DateTime? _chargeDeadline;
@@ -158,7 +159,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                   && State is TestState.Idle or TestState.Ready or TestState.Completed or TestState.Stopped,
             "电容充电");
 
-        // 开始测试：必填项齐全 + 充电完成（X10 = ON，进入就绪状态）后才可用
+        // 开始测试：必填项齐全 + 充电完成（X3 = ON，进入就绪状态）后才可用
         StartCommand = new AsyncRelayCommand(
             StartTestAsync,
             () => CanControl && HasRequiredInputs && State == TestState.Ready,
@@ -170,10 +171,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             () => PlcConnected,
             "停止测试");
 
-        // 保存记录：必填项齐全 + 已生成记录且尚未保存
+        // 保存记录：产品名称 / 产品编号不为空即可保存（无试验数据时给出提示）
         SaveCommand = new AsyncRelayCommand(
             SaveAsync,
-            () => HasRequiredInputs && _lastRecord is not null && !_lastRecordSaved,
+            () => !string.IsNullOrWhiteSpace(ProductName)
+                  && !string.IsNullOrWhiteSpace(ProductCode)
+                  && !_lastRecordSaved,
             "保存数据");
 
         // 导航类命令：历史记录 / 通讯设置 / 退出登录
@@ -363,7 +366,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         private set => SetProperty(ref _tripKa, value);
     }
 
-    /// <summary>运行时间（s）：PLC 计时值，单调递增。</summary>
+    /// <summary>运行时间（s）：读取 D1600（ms）÷1000，随轮询实时刷新。</summary>
     public double RunTimeSeconds
     {
         get => _runTimeSeconds;
@@ -407,7 +410,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         TestState.Testing => PassedToBrushConverter.FindBrush("B.Accent"),     // 测试中：青
         TestState.Completed => PassedToBrushConverter.FindBrush("B.Success"),  // 完成：绿
         TestState.Stopped => PassedToBrushConverter.FindBrush("B.TextMuted"),  // 已停止：暗灰
-        TestState.Alarm => PassedToBrushConverter.FindBrush("B.Warning"),      // 报警：橙
         TestState.Emergency => PassedToBrushConverter.FindBrush("B.Danger"),   // 急停：红
         _ => PassedToBrushConverter.FindBrush("B.TextSecondary")
     };
@@ -475,18 +477,19 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     /// <summary>打开日志文件夹（现场排障时直接定位到 log 目录）。</summary>
     public ICommand OpenLogCommand { get; }
 
-    /// <summary>操作类按钮的总开关：PLC 已连接、无急停/报警、且没有正在执行的操作。</summary>
+    /// <summary>操作类按钮的总开关：PLC 已连接、无急停、无告警、且没有正在执行的操作。</summary>
     private bool CanControl
         => PlcConnected
-           && State is not (TestState.Emergency or TestState.Alarm)
+           && State is not TestState.Emergency
+           && !IsAlarming
            && !_busy;
 
     // -----------------------------------------------------------------
     // 三个状态指示灯（对应 PLC 实时信号，随轮询数据帧刷新）
     // -----------------------------------------------------------------
     private bool _isWorking;        // 工作状态：M0（主回路输出）
-    private bool _isAlarming;       // 告警状态：X1
-    private bool _isEmergencyStop;  // 急停状态：X0
+    private bool _isAlarming;       // 告警状态：X4 ~ X7 任一断开
+    private bool _isEmergencyStop;  // 急停状态：X0 / X1 任一断开
 
     /// <summary>工作指示灯：M0 = ON 时亮绿色。</summary>
     public bool IsWorking
@@ -501,7 +504,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>告警指示灯：X1 = ON 时亮橙色。</summary>
+    /// <summary>告警指示灯：X4 ~ X7 任一断开时亮橙色。</summary>
     public bool IsAlarming
     {
         get => _isAlarming;
@@ -510,11 +513,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             if (SetProperty(ref _isAlarming, value))
             {
                 OnPropertyChanged(nameof(AlarmLampBrush));
+                UpdateCommandStates(); // 告警出现/解除 → 充电 / 开始等按钮可用性联动
             }
         }
     }
 
-    /// <summary>急停指示灯：X0 = ON 时亮红色。</summary>
+    /// <summary>急停指示灯：X0 / X1 任一急停时亮红色。</summary>
     public bool IsEmergencyStop
     {
         get => _isEmergencyStop;
@@ -532,12 +536,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         ? PassedToBrushConverter.FindBrush("B.Success")
         : PassedToBrushConverter.FindBrush("B.TextMuted");
 
-    /// <summary>告警灯颜色：X1 告警 = 橙；正常 = 灰。</summary>
+    /// <summary>告警灯颜色：X4 ~ X7 任一断开 = 橙；正常 = 灰。</summary>
     public Brush AlarmLampBrush => IsAlarming
         ? PassedToBrushConverter.FindBrush("B.Warning")
         : PassedToBrushConverter.FindBrush("B.TextMuted");
 
-    /// <summary>急停灯颜色：X0 急停 = 红；正常 = 灰。</summary>
+    /// <summary>急停灯颜色：X0 / X1 急停 = 红；正常 = 灰。</summary>
     public Brush EmergencyLampBrush => IsEmergencyStop
         ? PassedToBrushConverter.FindBrush("B.Danger")
         : PassedToBrushConverter.FindBrush("B.TextMuted");
@@ -671,10 +675,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         // 1) 同步连接状态与实时数值（这几项每次轮询都刷新，保证数字跟手）
         PlcConnected = snapshot.Connected;
-        CurrentKa = snapshot.CurrentKa;
-        RunTimeSeconds = Math.Max(RunTimeSeconds, snapshot.RunTimeSeconds);
+        CurrentKa = snapshot.CurrentKa;                 // D1520 原始值 A，÷1000 = kA
+        RunTimeSeconds = snapshot.RunTimeSeconds;       // D1600 原始值 ms，÷1000 = s，直接刷新显示
 
-        // 1.1) 三个状态指示灯：工作 M0 / 告警 X1 / 急停 X0
+        // 1.1) 状态指示灯：工作 M0 / 告警 X4~X7 / 急停 X0·X1
         IsWorking = snapshot.Working;
         IsAlarming = snapshot.Alarm;
         IsEmergencyStop = snapshot.Emergency;
@@ -709,22 +713,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             State = TestState.Idle;
         }
 
-        // 3) 报警信号：仅提示并锁定操作，不强制断流（由现场电气回路保证安全）
-        if (snapshot.Alarm)
-        {
-            if (State != TestState.Alarm)
-            {
-                State = TestState.Alarm;
-                ShowToast(LanguageManager.Get("L.Msg.Alarm"), true);
-                Logger.Warn("检测到 PLC 报警信号");
-            }
-        }
-        else if (State == TestState.Alarm)
-        {
-            State = TestState.Idle;
-        }
-
-        // 3.5) 充电超时保护：充电开始后 20 秒内未收到 X10 → 断开主回路并转入已停止
+        // 3) 充电超时保护：充电开始后 20 秒内未收到 X3 → 断开主回路并转入已停止
         if (State == TestState.Charging
             && _chargeDeadline is { } deadline
             && DateTime.UtcNow >= deadline)
@@ -732,13 +721,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             HandleChargeTimeout();
         }
 
-        // 4) 充电完成 X10 上升沿：充电中 → 就绪，并断开主回路等待开始
+        // 4) 充电完成 X3 上升沿：充电中 → 就绪（M0 保持 ON，无需写 false）
         if (snapshot.ChargeComplete && !_prevChargeComplete && State == TestState.Charging)
         {
             _chargeDeadline = null;        // 充电完成，取消超时监视
             State = TestState.Ready;
             ShowToast(LanguageManager.Get("L.Status.Ready"));
-            _ = TurnOffMainCircuitAsync();
             Logger.Info("电容充电完成，进入就绪状态");
         }
 
@@ -757,11 +745,18 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 TryAppendChartSample(snapshot.CurrentKa, elapsed);
             }
 
-            // ★ 倒计时归零：向 PLC 发送停止命令（只触发一次）
-            if (RemainingSeconds <= 0 && !_countdownStopRequested)
+            // 记录本次试验是否出现过非零运行时间（防止 PLC 尚未装载设定值时误判结束）
+            if (snapshot.RunTimeSeconds > 0)
+            {
+                _sawRunTimeNonZero = true;
+            }
+
+            // ★ 运行时间（D1600）归零：试验结束，停止绘制曲线并下发停止命令（只触发一次）
+            if (_sawRunTimeNonZero && snapshot.RunTimeSeconds <= 0 && !_countdownStopRequested)
             {
                 _countdownStopRequested = true;
-                Logger.Info($"输出倒计时结束（设定 {_activeSetTime:F2} s），下发停止命令");
+                _chartRecording = false;   // ★ 图表立即停止记录
+                Logger.Info("运行时间归零（D1600 = 0），试验结束，停止绘制曲线");
                 _ = FinishTestByCountdownAsync();
             }
         }
@@ -786,7 +781,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// 充电超时处理：充电开始后 20 秒仍未收到 X10 充电完成信号。
+    /// 充电超时处理：充电开始后 20 秒仍未收到 X3 充电完成信号。
     /// 断开主回路（M0=OFF）防止电容持续带电，状态转入“已停止”并提示操作员检查。
     /// </summary>
     private void HandleChargeTimeout()
@@ -796,7 +791,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _chartRecording = false;
         State = TestState.Stopped;
         ShowToast(LanguageManager.Get("L.Msg.ChargeTimeout"), true);
-        Logger.Warn($"电容充电超时（{ChargeTimeoutSeconds:F0} 秒未收到 X10 充电完成信号），已断开主回路");
+        Logger.Warn($"电容充电超时（{ChargeTimeoutSeconds:F0} 秒未收到 X3 充电完成信号），已断开主回路");
         _ = TurnOffMainCircuitAsync(); // M0 = OFF（内部已捕获异常，只记日志）
     }
 
@@ -878,7 +873,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     // 九、业务操作：充电 / 开始 / 停止 / 保存
     // =====================================================================
 
-    /// <summary>电容充电：置位主回路（M0=ON），等待 PLC 返回充电完成信号 X10。</summary>
+    /// <summary>电容充电：置位主回路（M0=ON），等待 PLC 返回充电完成信号 X3。</summary>
     private async Task ChargeAsync()
     {
         if (!EnsureControlReady())
@@ -902,7 +897,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             _prevChargeComplete = false;                      // 清空上升沿记忆
             State = TestState.Charging;                       // 进入充电中
             await _plc!.SetMainCircuitAsync(true).ConfigureAwait(true); // M0 = ON
-            _chargeDeadline = DateTime.UtcNow.AddSeconds(ChargeTimeoutSeconds); // 20 秒充电超时
+            _chargeDeadline = DateTime.UtcNow.AddSeconds(ChargeTimeoutSeconds); // 40 秒充电超时
             ShowToast(LanguageManager.Get("L.Status.Charging"));
             Logger.User($"工艺操作：电容充电（工位 {Station}，设定 {SetCurrentText} kA / {SetTimeText} s，超时 {ChargeTimeoutSeconds:F0} 秒）");
         }).ConfigureAwait(true);
@@ -911,7 +906,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     /// <summary>
     /// 开始测试：
     /// 1) 校验输入参数；2) 把设定值写入 PLC 对应工位寄存器；
-    /// 3) 清零曲线与计时；4) 向 PLC 发送启动命令（M1 脉冲）；
+    /// 3) 清零曲线与计时；4) 向 PLC 发送启动命令（M1=true、M3=false）；
     /// 5) 之后由数据回调驱动“1 秒采样 + 倒计时”。
     /// </summary>
     private async Task StartTestAsync()
@@ -926,7 +921,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
-        if (State is TestState.Alarm or TestState.Emergency)
+        if (State is TestState.Emergency)
         {
             ShowToast(LanguageManager.Get("L.Msg.AlarmActive"), true);
             return;
@@ -958,7 +953,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             _prevChargeComplete = false;
             _chartTimeOffset = _uptime.Elapsed.TotalSeconds; // 曲线时间轴从 0 开始
             _lastChartSampleSeconds = double.NegativeInfinity; // 复位采样节拍
-            _countdownStopRequested = false;                   // 允许倒计时触发停止
+            _countdownStopRequested = false;                   // 允许结束条件触发停止
+            _sawRunTimeNonZero = false;                        // 复位运行时间非零标志
             _chartRecording = true;                            // ★ 开始向图表记录数据
             Samples.Clear();                                   // 清空上一轮波形
             PeakKa = 0;
@@ -972,15 +968,15 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             State = TestState.Testing;
             OnPropertyChanged(nameof(ProgressPercent));
 
-            // 4) 向 PLC 发送启动命令：M1 置位 120ms 后复位（脉冲触发）
-            await _plc.PulseStartAsync().ConfigureAwait(true);
-            Logger.User($"工艺操作：开始测试 工位 {Station}，{current:F3} kA / {time:F2} s（已下发 M1 启动脉冲）");
+            // 4) 发送启动电平：只写 M1 = true，无需写 M3
+            await _plc!.SetStartTestAsync(true).ConfigureAwait(true);
+            Logger.User($"工艺操作：开始测试 工位 {Station}，{current:F3} kA / {time:F2} s（M1=ON）");
         }).ConfigureAwait(true);
     }
 
     /// <summary>
     /// 手动停止测试：PLC 已连接的任意时刻均可点击。
-    /// 向 PLC 下发 M3 停止脉冲并断开主回路（M0=OFF），状态转为“已停止”。
+    /// 向 PLC 撤销 M1、置位 M3 停止电平并断开主回路（M0=OFF），状态转为“已停止”。
     /// 不走 RunBusyAsync：停止命令必须能打断其它忙碌操作，只依赖命令自身的防重入。
     /// </summary>
     private async Task StopTestAsync()
@@ -1007,8 +1003,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             _prevChargeComplete = false;
             _chargeDeadline = null;           // 取消充电超时监视
 
-            // 停止命令：M3 脉冲 + M0 断开，确保主回路彻底断电
-            await _plc!.PulseStopAsync().ConfigureAwait(true);
+            // 停止命令：只写 M3 = true（M0 断开确保主回路彻底断电）
+            await _plc!.SetStopTestAsync(true).ConfigureAwait(true);
             await _plc.SetMainCircuitAsync(false).ConfigureAwait(true);
 
             if (wasActive)
@@ -1017,7 +1013,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 ShowToast(LanguageManager.Get("L.Msg.Stopped"));
             }
 
-            Logger.User($"工艺操作：手动停止测试（已下发 M3 停止脉冲并断开主回路，停止前状态：{State}）");
+            Logger.User($"工艺操作：手动停止测试（M3=ON 并断开主回路，停止前状态：{State}）");
         }
         catch (Exception ex)
         {
@@ -1028,7 +1024,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// 倒计时归零后的收尾：
-    /// 1) 向 PLC 下发停止命令（M3 脉冲 + M0 断开）；
+    /// 1) 向 PLC 下发停止命令（M3=ON + M0 断开）；
     /// 2) 等待 350ms 让最后一帧数据回传（取到最终脱扣电流）；
     /// 3) 生成试验记录并提示结果。
     /// </summary>
@@ -1038,8 +1034,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         {
             if (_plc is not null)
             {
-                await _plc.PulseStopAsync().ConfigureAwait(true);        // M3 停止脉冲
-                await _plc.SetMainCircuitAsync(false).ConfigureAwait(true); // M0 断开主回路
+                await _plc.SetStopTestAsync(true).ConfigureAwait(true);      // M3 = true（停止）
+                await _plc.SetMainCircuitAsync(false).ConfigureAwait(true);  // M0 断开主回路
             }
         }
         catch (Exception ex)
@@ -1200,7 +1196,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     // 十、输入校验与通用辅助
     // =====================================================================
 
-    /// <summary>通用前置校验：PLC 必须连接，且不处于急停 / 报警状态。</summary>
+    /// <summary>通用前置校验：PLC 必须连接，且不处于急停状态。</summary>
     private bool EnsureControlReady()
     {
         if (!PlcConnected)
@@ -1209,7 +1205,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             return false;
         }
 
-        if (State is TestState.Emergency or TestState.Alarm)
+        if (State is TestState.Emergency)
         {
             ShowToast(LanguageManager.Get("L.Msg.AlarmActive"), true);
             return false;

@@ -62,7 +62,6 @@
     <sys:String x:Key="L.Status.Testing">Testing</sys:String>
     <sys:String x:Key="L.Status.Completed">Completed</sys:String>
     <sys:String x:Key="L.Status.Stopped">Stopped</sys:String>
-    <sys:String x:Key="L.Status.Alarm">Alarm</sys:String>
     <sys:String x:Key="L.Status.Emergency">E-Stop</sys:String>
 
     <sys:String x:Key="L.Button.Charge">Charge</sys:String>
@@ -105,16 +104,15 @@
     <sys:String x:Key="L.Msg.NoDataToSave">No test data to save. Run a test first.</sys:String>
     <sys:String x:Key="L.Msg.NoPlc">PLC is not connected. Control operation blocked.</sys:String>
     <sys:String x:Key="L.Msg.ChargeFirst">Please charge the capacitor first</sys:String>
-    <sys:String x:Key="L.Msg.AlarmActive">Alarm or E-Stop is active. Test start blocked.</sys:String>
+    <sys:String x:Key="L.Msg.AlarmActive">E-Stop is active. Operation blocked.</sys:String>
     <sys:String x:Key="L.Msg.ConnectionOk">PLC connected</sys:String>
     <sys:String x:Key="L.Msg.ConnectionFail">PLC connection failed: {0}</sys:String>
     <sys:String x:Key="L.Msg.Completed">Test completed, trip current {0:F3} kA</sys:String>
     <sys:String x:Key="L.Msg.Pass">PASS</sys:String>
     <sys:String x:Key="L.Msg.Fail">FAIL</sys:String>
     <sys:String x:Key="L.Msg.Emergency">E-Stop triggered. Equipment stopped.</sys:String>
-    <sys:String x:Key="L.Msg.Alarm">Equipment alarm. Check the PLC alarm details.</sys:String>
     <sys:String x:Key="L.Msg.Stopped">Test stopped</sys:String>
-    <sys:String x:Key="L.Msg.ChargeTimeout">Charge timeout (no X10 signal within 20 s). Main circuit opened. Check the charging circuit.</sys:String>
+    <sys:String x:Key="L.Msg.ChargeTimeout">Charge timeout (no X3 signal within 40 s). Main circuit opened. Check the charging circuit.</sys:String>
     <sys:String x:Key="L.Msg.Exported">Exported to: {0}</sys:String>
     <sys:String x:Key="L.Msg.ExportFailed">Export failed: {0}</sys:String>
     <sys:String x:Key="L.Msg.NoExportData">No records to export</sys:String>
