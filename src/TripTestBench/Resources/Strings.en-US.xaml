@@ -62,6 +62,7 @@
     <sys:String x:Key="L.Status.Testing">Testing</sys:String>
     <sys:String x:Key="L.Status.Completed">Completed</sys:String>
     <sys:String x:Key="L.Status.Stopped">Stopped</sys:String>
+    <sys:String x:Key="L.Status.Alarm">Alarm</sys:String>
     <sys:String x:Key="L.Status.Emergency">E-Stop</sys:String>
 
     <sys:String x:Key="L.Button.Charge">Charge</sys:String>

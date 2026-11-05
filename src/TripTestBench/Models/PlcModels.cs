@@ -70,6 +70,9 @@ public enum TestState
     /// <summary>已停止：操作员手动停止或超时保护触发。</summary>
     Stopped,
 
+    /// <summary>告警：PLC 告警信号有效（X4~X7 任一 OFF），已停止输出并锁定操作。</summary>
+    Alarm,
+
     /// <summary>急停：安全回路动作（X0 / X1 任一断开），立即断流并锁定操作。</summary>
     Emergency
 }

@@ -26,7 +26,7 @@ using TripTestBench.Services.Plc;              // PLC 通讯抽象与工厂
 namespace TripTestBench.ViewModels;
 
 /// <summary>
-/// 主界面视图模型：负责试验流程控制、PLC 数据接入、曲线采样与倒计时。
+/// 主界面视图模型：负责试验流程控制、PLC 数据接入与曲线采样。
 /// </summary>
 public sealed class MainViewModel : ObservableObject, IDisposable
 {
@@ -79,17 +79,16 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private double _peakKa;                        // 本次试验峰值电流（kA）
     private double _tripKa;                        // 脱扣电流（kA）
     private double _runTimeSeconds;                // 运行时间（s）
-    private double _remainingSeconds;              // 倒计时剩余时间（s）
 
     private double _activeSetCurrent = 10;         // 本次试验实际下发的设定电流（kA）
     private double _activeSetTime = 3;             // 本次试验实际下发的设定时间（s）
     private double _chartTimeOffset;               // 曲线时间轴零点偏移（让测试从 0 秒开始）
 
     // ---------------------------------------------------------------------
-    // 曲线采样与倒计时控制标志
+    // 曲线采样与试验结束控制标志
     // ---------------------------------------------------------------------
     private double _lastChartSampleSeconds = double.NegativeInfinity; // 上一次采样时间（秒）
-    private bool _countdownStopRequested;          // 倒计时归零后是否已下发停止命令（防重复）
+    private bool _finishRequested;                 // 本次试验是否已判定结束（防重复生成记录）
     private bool _sawRunTimeNonZero;               // 本次试验是否出现过非零运行时间（防止 D1600 初值为 0 时误判结束）
     private PlcSnapshot? _latestSnapshot;          // 最近一帧 PLC 数据（生成记录时取值）
     private bool _chartRecording;                  // 是否正在向图表记录数据（仅测试期间为 true）
@@ -373,24 +372,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         private set => SetProperty(ref _runTimeSeconds, value);
     }
 
-    /// <summary>倒计时剩余秒数：从设定时间向下递减，归零时触发停止命令。</summary>
-    public double RemainingSeconds
-    {
-        get => _remainingSeconds;
-        private set
-        {
-            if (SetProperty(ref _remainingSeconds, value))
-            {
-                // 剩余时间变化 → 进度条长度同步变化
-                OnPropertyChanged(nameof(ProgressPercent));
-            }
-        }
-    }
-
-    /// <summary>倒计时进度百分比（100% = 满，0% = 倒计时结束），用于进度条。</summary>
-    public double ProgressPercent
-        => _activeSetTime <= 0 ? 0 : Math.Clamp(RemainingSeconds / _activeSetTime * 100, 0, 100);
-
     /// <summary>顶部系统时间文本（秒级刷新）。</summary>
     public string ClockText
     {
@@ -410,6 +391,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         TestState.Testing => PassedToBrushConverter.FindBrush("B.Accent"),     // 测试中：青
         TestState.Completed => PassedToBrushConverter.FindBrush("B.Success"),  // 完成：绿
         TestState.Stopped => PassedToBrushConverter.FindBrush("B.TextMuted"),  // 已停止：暗灰
+        TestState.Alarm => PassedToBrushConverter.FindBrush("B.Warning"),      // 告警：橙
         TestState.Emergency => PassedToBrushConverter.FindBrush("B.Danger"),   // 急停：红
         _ => PassedToBrushConverter.FindBrush("B.TextSecondary")
     };
@@ -660,7 +642,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// 处理一帧 PLC 数据：刷新实时值、驱动倒计时、按 1 秒节奏采样曲线、处理各类信号。
+    /// 处理一帧 PLC 数据：刷新实时值、按 1 秒节奏采样曲线、处理各类信号（急停 / 告警 / 完成）。
     /// </summary>
     private void ApplySnapshot(PlcSnapshot snapshot)
     {
@@ -670,7 +652,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
-        // 记录最新一帧，供“倒计时结束”时生成试验记录使用
+        // 记录最新一帧，供生成试验记录使用
         _latestSnapshot = snapshot;
 
         // 1) 同步连接状态与实时数值（这几项每次轮询都刷新，保证数字跟手）
@@ -688,7 +670,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             PeakKa = snapshot.PeakCurrentKa;
         }
 
-        // 2) 急停优先级最高：立即终止一切动作并提示
+        // 2) 急停优先级最高：立即下发 M3=ON + M0=OFF，并终止一切动作
         if (snapshot.Emergency)
         {
             if (State != TestState.Emergency)
@@ -696,10 +678,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 _testWatch.Stop();
                 _chartRecording = false;   // ★ 急停：立即停止记录曲线
                 CurrentKa = 0;
-                RemainingSeconds = 0;
                 State = TestState.Emergency;
                 ShowToast(LanguageManager.Get("L.Msg.Emergency"), true);
                 Logger.Warn("检测到急停信号，试验中止");
+                _ = FireStopOutputAsync("急停信号触发");   // M3 = true、M0 = OFF
             }
 
             _prevCompleted = snapshot.Completed;
@@ -711,6 +693,23 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         if (State == TestState.Emergency)
         {
             State = TestState.Idle;
+        }
+
+        // 2.5) 告警：立即下发 M3=ON + M0=OFF 并锁定操作（只在进入告警时执行一次）
+        if (snapshot.Alarm && State is TestState.Testing or TestState.Charging or TestState.Ready)
+        {
+            _testWatch.Stop();
+            _chartRecording = false;
+            _chargeDeadline = null;
+            State = TestState.Alarm;
+            ShowToast(LanguageManager.Get("L.Msg.Alarm"), true);
+            Logger.Warn("检测到告警信号，停止输出并锁定操作");
+            _ = FireStopOutputAsync("告警信号触发");       // M3 = true、M0 = OFF
+        }
+        else if (!snapshot.Alarm && State == TestState.Alarm)
+        {
+            State = TestState.Idle;                        // 告警解除，回到待机
+            Logger.Info("告警信号解除，回到待机状态");
         }
 
         // 3) 充电超时保护：充电开始后 20 秒内未收到 X3 → 断开主回路并转入已停止
@@ -732,11 +731,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         _prevChargeComplete = snapshot.ChargeComplete;
 
-        // 5) 测试中：驱动倒计时 + 每 1 秒采样曲线
+        // 5) 测试中：每 1 秒采样曲线；试验结束由 PLC 信号驱动（不倒计时）
         if (State == TestState.Testing)
         {
             var elapsed = _testWatch.Elapsed.TotalSeconds;          // 本次试验已运行秒数
-            RemainingSeconds = Math.Max(0, _activeSetTime - elapsed); // 倒计时递减
 
             // ★ 1 秒采样一次：仅当“正在记录”时才把实时电流写入图表。
             //   停止测试后 _chartRecording 会被置为 false，图表随即停止记录数据。
@@ -751,13 +749,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 _sawRunTimeNonZero = true;
             }
 
-            // ★ 运行时间（D1600）归零：试验结束，停止绘制曲线并下发停止命令（只触发一次）
-            if (_sawRunTimeNonZero && snapshot.RunTimeSeconds <= 0 && !_countdownStopRequested)
+            // ★ 运行时间（D1600）归零：PLC 判定试验结束，软件只生成记录，
+            //   不操作 M3（停止输出仅由停止按钮 / 告警 / 急停触发）
+            if (_sawRunTimeNonZero && snapshot.RunTimeSeconds <= 0 && !_finishRequested)
             {
-                _countdownStopRequested = true;
+                _finishRequested = true;
                 _chartRecording = false;   // ★ 图表立即停止记录
-                Logger.Info("运行时间归零（D1600 = 0），试验结束，停止绘制曲线");
-                _ = FinishTestByCountdownAsync();
+                Logger.Info("运行时间归零（D1600 = 0），PLC 判定试验结束");
+                CompleteTest(snapshot);
             }
         }
         else if (_chartRecording)
@@ -771,7 +770,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         // 说明：停止 / 完成 / 待机 / 就绪状态下不再向图表追加采样点，
         //       曲线会保持停止瞬间的形态，便于操作员回看本次试验波形。
 
-        // 6) PLC 完成信号 M80 上升沿：兜底结束试验（正常情况下倒计时会先结束）
+        // 6) PLC 完成信号 M80 上升沿：结束试验并生成记录（软件不操作 M3）
         if (snapshot.Completed && !_prevCompleted && State == TestState.Testing)
         {
             CompleteTest(snapshot);
@@ -795,9 +794,32 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _ = TurnOffMainCircuitAsync(); // M0 = OFF（内部已捕获异常，只记日志）
     }
 
-    /// <summary>充电完成后断开主回路（M0=OFF），避免长时间带电。</summary>
-    private async Task TurnOffMainCircuitAsync()
+    /// <summary>
+    /// 停止输出：向 PLC 写 M3 = true 并断开主回路（M0 = OFF）。
+    /// 仅在三种场景调用：用户点击停止按钮、检测到告警、检测到急停。
+    /// 其余任何流程不得操作 M3。
+    /// </summary>
+    private async Task FireStopOutputAsync(string reason)
     {
+        try
+        {
+            if (_plc is not null)
+            {
+                await _plc.SetStopTestAsync(true).ConfigureAwait(false);      // M3 = true
+                await _plc.SetMainCircuitAsync(false).ConfigureAwait(false);  // M0 = OFF
+            }
+
+            Logger.Warn($"下发停止输出（M3=ON、M0=OFF）：{reason}");
+        }
+        catch (Exception ex)
+        {
+            // 停止命令失败必须记录（此时设备可能仍带电，需要现场确认）
+            Logger.Error($"下发停止输出失败（{reason}）", ex);
+        }
+    }
+
+    /// <summary>充电完成后断开主回路（M0=OFF），避免长时间带电。</summary>
+    private async Task TurnOffMainCircuitAsync()    {
         try
         {
             if (_plc is not null)
@@ -846,27 +868,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>1 秒时钟：刷新系统时间；测试中同步刷新倒计时并做归零兜底判断。</summary>
+    /// <summary>1 秒时钟：仅刷新顶部系统时间（倒计时已删除，试验结束由 PLC 信号驱动）。</summary>
     private void OnClockTick(object? sender, EventArgs e)
     {
         // 顶部系统时间（精确到秒）
         ClockText = DateTime.Now.ToString("yyyy-MM-dd  HH:mm:ss");
-
-        if (State != TestState.Testing)
-        {
-            return;
-        }
-
-        // 即使 PLC 数据帧暂时中断，倒计时也要继续走（本地秒表计时）
-        RemainingSeconds = Math.Max(0, _activeSetTime - _testWatch.Elapsed.TotalSeconds);
-
-        // 归零兜底：若数据帧回调因通讯延迟未触发，这里补发停止命令
-        if (RemainingSeconds <= 0 && !_countdownStopRequested)
-        {
-            _countdownStopRequested = true;
-            Logger.Info("倒计时归零（时钟兜底），下发停止命令");
-            _ = FinishTestByCountdownAsync();
-        }
     }
 
     // =====================================================================
@@ -907,7 +913,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     /// 开始测试：
     /// 1) 校验输入参数；2) 把设定值写入 PLC 对应工位寄存器；
     /// 3) 清零曲线与计时；4) 向 PLC 发送启动命令（M1=true、M3=false）；
-    /// 5) 之后由数据回调驱动“1 秒采样 + 倒计时”。
+    /// 5) 之后由数据回调驱动“1 秒采样”，试验结束由 PLC 信号（运行时间归零 / M80）判定。
     /// </summary>
     private async Task StartTestAsync()
     {
@@ -940,7 +946,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         await RunBusyAsync(async () =>
         {
-            // 记录本次试验的设定值（后续倒计时、记录、判定都以它为准）
+            // 记录本次试验的设定值（后续记录、判定都以它为准）
             _activeSetCurrent = current;
             _activeSetTime = time;
 
@@ -953,7 +959,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             _prevChargeComplete = false;
             _chartTimeOffset = _uptime.Elapsed.TotalSeconds; // 曲线时间轴从 0 开始
             _lastChartSampleSeconds = double.NegativeInfinity; // 复位采样节拍
-            _countdownStopRequested = false;                   // 允许结束条件触发停止
+            _finishRequested = false;                          // 复位试验结束标志
             _sawRunTimeNonZero = false;                        // 复位运行时间非零标志
             _chartRecording = true;                            // ★ 开始向图表记录数据
             Samples.Clear();                                   // 清空上一轮波形
@@ -961,12 +967,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             TripKa = 0;
             CurrentKa = 0;
             RunTimeSeconds = 0;
-            RemainingSeconds = time;                           // 倒计时初值 = 设定时间
 
             // 3) 启动计时并切换到“测试中”
             _testWatch.Restart();
             State = TestState.Testing;
-            OnPropertyChanged(nameof(ProgressPercent));
 
             // 4) 发送启动电平：只写 M1 = true，无需写 M3
             await _plc!.SetStartTestAsync(true).ConfigureAwait(true);
@@ -996,16 +1000,14 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         try
         {
-            // 立即冻结界面采集与倒计时，再下发停止命令
+            // 立即冻结界面采集，再下发停止命令
             _testWatch.Stop();
             _chartRecording = false;          // ★ 停止记录：图表不再新增数据点，曲线保持冻结
-            RemainingSeconds = 0;
             _prevChargeComplete = false;
             _chargeDeadline = null;           // 取消充电超时监视
 
-            // 停止命令：只写 M3 = true（M0 断开确保主回路彻底断电）
-            await _plc!.SetStopTestAsync(true).ConfigureAwait(true);
-            await _plc.SetMainCircuitAsync(false).ConfigureAwait(true);
+            // 停止输出：M3 = true + M0 = OFF（唯一允许操作 M3 的场景之一）
+            await FireStopOutputAsync("手动停止测试").ConfigureAwait(true);
 
             if (wasActive)
             {
@@ -1019,38 +1021,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         {
             Logger.Error("停止测试失败", ex);
             ShowToast(string.Format(LanguageManager.Get("L.Msg.OperationFailed"), ex.Message), true);
-        }
-    }
-
-    /// <summary>
-    /// 倒计时归零后的收尾：
-    /// 1) 向 PLC 下发停止命令（M3=ON + M0 断开）；
-    /// 2) 等待 350ms 让最后一帧数据回传（取到最终脱扣电流）；
-    /// 3) 生成试验记录并提示结果。
-    /// </summary>
-    private async Task FinishTestByCountdownAsync()
-    {
-        try
-        {
-            if (_plc is not null)
-            {
-                await _plc.SetStopTestAsync(true).ConfigureAwait(true);      // M3 = true（停止）
-                await _plc.SetMainCircuitAsync(false).ConfigureAwait(true);  // M0 断开主回路
-            }
-        }
-        catch (Exception ex)
-        {
-            // 停止命令失败必须记录（此时设备可能仍带电，需要现场确认）
-            Logger.Error("倒计时结束下发停止命令失败", ex);
-        }
-
-        // 等待一帧数据，尽量取到 PLC 记录的最终脱扣电流
-        await Task.Delay(350).ConfigureAwait(true);
-
-        // 只有仍在“测试中”才收尾（防止与手动停止 / M80 完成信号重复处理）
-        if (State == TestState.Testing)
-        {
-            CompleteTest(_latestSnapshot ?? new PlcSnapshot());
         }
     }
 
@@ -1156,7 +1126,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         TripKa = Math.Round(trip, 3);
         RunTimeSeconds = Math.Round(_testWatch.Elapsed.TotalSeconds, 2);
-        RemainingSeconds = 0;
         State = TestState.Completed;
 
         // 合格判定：脱扣电流与设定值偏差 ≤ 10%

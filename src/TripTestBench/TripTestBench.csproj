@@ -20,8 +20,11 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <!-- Release 发布输出目录：现场交付目录（E 盘）。发布命令不带 -o 参数时生效 -->
-    <PublishDir>E:\mal\product\PLC上位机\2026年\2 天津2\TripTestBench\publish\</PublishDir>
+    <!-- Release 发布输出目录：src 同级目录下的 publish\。
+         $(MSBuildThisFileDirectory) = csproj 所在目录（...\src\TripTestBench\），
+         ..\..\publish\ 即工程根目录下的 publish\。
+         发布命令不带 -o 参数时生效；无论工程拷贝到哪里都自适应 -->
+    <PublishDir>$(MSBuildThisFileDirectory)..\..\publish\</PublishDir>
   </PropertyGroup>
 
   <ItemGroup>

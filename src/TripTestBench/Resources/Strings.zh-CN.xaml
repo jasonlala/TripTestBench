@@ -62,6 +62,7 @@
     <sys:String x:Key="L.Status.Testing">测试进行中</sys:String>
     <sys:String x:Key="L.Status.Completed">测试完成</sys:String>
     <sys:String x:Key="L.Status.Stopped">已停止</sys:String>
+    <sys:String x:Key="L.Status.Alarm">告警</sys:String>
     <sys:String x:Key="L.Status.Emergency">急停</sys:String>
 
     <sys:String x:Key="L.Button.Charge">电容充电</sys:String>

@@ -354,7 +354,7 @@
 
                         <Border Grid.Row="1" Height="1" Background="{StaticResource B.Border}" Margin="0,14" />
 
-                        <!-- 运行时间：读取 D1600（ms ÷1000 = s），不做本地倒计时 -->
+                        <!-- 运行时间：读取 D1600（ms ÷1000 = s），试验结束由 PLC 信号驱动 -->
                         <StackPanel Grid.Row="2">
                             <TextBlock Text="{DynamicResource L.Readout.RunTime}" Style="{StaticResource CaptionText}" />
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
@@ -368,10 +368,6 @@
                                            FontSize="15"
                                            Margin="8,0,0,8" />
                             </StackPanel>
-                            <ProgressBar Style="{StaticResource ThinProgress}"
-                                         Maximum="100"
-                                         Value="{Binding ProgressPercent, Mode=OneWay}"
-                                         Margin="0,10,0,0" />
                         </StackPanel>
 
                         <Border Grid.Row="3" Height="1" Background="{StaticResource B.Border}" Margin="0,16,0,0" />
