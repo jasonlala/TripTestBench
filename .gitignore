@@ -35,3 +35,6 @@ Thumbs.db
 
 # 发布压缩包
 publish.zip
+
+# 模拟器运行日志
+tools/sim.log
