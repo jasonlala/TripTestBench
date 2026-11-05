@@ -318,7 +318,8 @@
                             </StackPanel>
                         </Grid>
 
-                        <controls:CurrentChart Grid.Row="1"
+                        <controls:CurrentChart x:Name="ChartPlot"
+                                               Grid.Row="1"
                                                Samples="{Binding Samples}"
                                                WindowSeconds="30"
                                                Margin="0,12,0,0" />

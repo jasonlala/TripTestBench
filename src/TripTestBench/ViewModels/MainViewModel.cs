@@ -106,8 +106,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     /// <summary>本次充电的截止时刻（充电开始时设置；就绪 / 停止 / 超时后清空）。</summary>
     private DateTime? _chargeDeadline;
 
-    private TestRecord? _lastRecord;               // 最近一次试验记录（等待保存）
-    private bool _lastRecordSaved;                 // 该记录是否已保存（控制保存按钮可用性）
+    private TestRecord? _lastRecord;               // 最近一次试验记录（保存时优先使用；为空则用当前输入组装）
 
     private string _clockText = DateTime.Now.ToString("yyyy-MM-dd  HH:mm:ss"); // 顶部系统时间
     private string _toastMessage = string.Empty;   // 底部提示消息文本
@@ -170,12 +169,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             () => PlcConnected,
             "停止测试");
 
-        // 保存记录：产品名称 / 产品编号不为空即可保存（无试验数据时给出提示）
+        // 保存记录：产品名称 / 产品编号不为空即可保存（任意时刻、可重复保存）
         SaveCommand = new AsyncRelayCommand(
             SaveAsync,
             () => !string.IsNullOrWhiteSpace(ProductName)
-                  && !string.IsNullOrWhiteSpace(ProductCode)
-                  && !_lastRecordSaved,
+                  && !string.IsNullOrWhiteSpace(ProductCode),
             "保存数据");
 
         // 导航类命令：历史记录 / 通讯设置 / 退出登录
@@ -1027,18 +1025,23 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     /// <summary>保存试验记录到本地历史库。</summary>
     private async Task SaveAsync()
     {
-        if (_lastRecord is null)
+        // 尚未生成试验记录时，用当前界面输入组装一条记录（任意时刻都可保存）
+        var record = _lastRecord ?? new TestRecord
         {
-            ShowToast(LanguageManager.Get("L.Msg.NoDataToSave"), true);
-            return;
-        }
+            TestTime = DateTime.Now,
+            ProductName = ProductName.Trim(),
+            ProductCode = ProductCode.Trim(),
+            Tester = Tester.Trim(),
+            Station = Station,
+            SetCurrentKa = double.TryParse(SetCurrentText, NumberStyles.Float, CultureInfo.InvariantCulture, out var sc) ? sc : 0,
+            SetTimeSeconds = double.TryParse(SetTimeText, NumberStyles.Float, CultureInfo.InvariantCulture, out var st) ? st : 0,
+            PeakCurrentKa = Math.Round(PeakKa, 3),
+            RunTimeSeconds = RunTimeSeconds,
+            Passed = false
+        };
 
-        if (_lastRecordSaved)
-        {
-            return;
-        }
-
-        var record = _lastRecord;
+        // CSV 曲线数据：优先用试验快照，没有则用当前图表数据
+        var csvSamples = _lastRecordSamples.Count > 0 ? _lastRecordSamples : Samples.ToList();
 
         // 1) 先在 UI 线程把当前曲线区域渲染成 PNG
         //    （RenderTargetBitmap 必须在 UI 线程调用，所以放在 RunBusyAsync 之外）
@@ -1056,7 +1059,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             {
                 archivePath = _records.SaveTestDataCsv(
                     record,
-                    _lastRecordSamples,
+                    csvSamples,
                     BuildRecordInfoItems(record),
                     LanguageManager.Get("L.Data.ColTime"),
                     LanguageManager.Get("L.Data.ColCurrent"),
@@ -1067,15 +1070,12 @@ public sealed class MainViewModel : ObservableObject, IDisposable
                 Logger.Error("生成 CSV 归档副本失败（数据库记录已保存）", ex);
             }
 
-            _lastRecordSaved = true;
-            UpdateCommandStates();
-
-            // 4) 提示：数据已进数据库，曲线截图随记录一起保存
+            // 4) 提示：数据已进数据库，曲线截图随记录一起保存（可重复保存，每次生成新记录）
             ShowToast(LanguageManager.Get(chartImage is { Length: > 0 } ? "L.Msg.SavedDb" : "L.Msg.SavedDbNoChart"));
 
             Logger.Info($"当前试验数据已保存到 SQLite：{record.ProductName} / {record.ProductCode}"
                         + $"（数据库 {_records.DatabasePath}，截图 {(chartImage?.Length ?? 0) / 1024} KB，"
-                        + $"曲线快照 {_lastRecordSamples.Count} 点，当前图表 {Samples.Count} 点）"
+                        + $"曲线快照 {csvSamples.Count} 点，当前图表 {Samples.Count} 点）"
                         + (archivePath is null ? "，CSV 归档失败" : $"，CSV 归档 {archivePath}"));
             return Task.CompletedTask;
         }).ConfigureAwait(true);
@@ -1147,8 +1147,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             RunTimeSeconds = RunTimeSeconds,
             Passed = passed
         };
-        _lastRecordSaved = false;
-
         // ★ 立刻快照本次试验的曲线数据：
         //   操作员之后可能重新充电 / 开始新试验（Samples 会被清空），
         //   因此“保存数据”必须使用这份快照，才能写入真正属于本次试验的波形。

@@ -24,7 +24,7 @@ public partial class MainView : UserControl
     }
 
     /// <summary>
-    /// 把电流曲线卡片（含标题、峰值、曲线本身）渲染为 PNG 图片字节流。
+    /// 把电流曲线卡片（标题 + 峰值电流 + 图表区域）渲染为 PNG 图片字节流。
     /// 由 MainViewModel 在“保存数据”时调用，结果写入数据库最后一列 ChartImage。
     /// </summary>
     /// <returns>PNG 字节；控件尚未布局完成时返回 null</returns>
@@ -54,7 +54,17 @@ public partial class MainView : UserControl
             96 * dpi.DpiScaleY,
             PixelFormats.Pbgra32);
 
-        bitmap.Render(ChartCard);
+        // 用 VisualBrush 把卡片重绘到一个与卡片同尺寸的矩形上再渲染：
+        // 直接 Render(卡片) 会受窗口布局裁剪/偏移影响，导致截图缺一块；
+        // VisualBrush 方式总是从控件自身 (0,0) 开始完整绘制。
+        var paint = new System.Windows.Shapes.Rectangle
+        {
+            Width = width,
+            Height = height,
+            Fill = new VisualBrush(ChartCard)
+        };
+        paint.Arrange(new System.Windows.Rect(0, 0, width, height));
+        bitmap.Render(paint);
 
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
