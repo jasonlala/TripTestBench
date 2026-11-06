@@ -24,7 +24,7 @@ public static class AppPaths
 
     /// <summary>
     /// SQLite 试验数据库文件：试验记录 + 曲线截图。
-    /// 与 exe 同目录（publish 目录），现场备份数据更直观。
+    /// 默认与 TripTestBench.exe 同一目录，现场备份直观。
     /// </summary>
     public static string DatabaseFile => Path.Combine(AppContext.BaseDirectory, "triptestbench.db");
 
