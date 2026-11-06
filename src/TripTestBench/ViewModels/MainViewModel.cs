@@ -67,17 +67,17 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     // ---------------------------------------------------------------------
     private TestState _state = TestState.Idle;     // 当前试验状态
     private bool _plcConnected;                    // PLC 是否已连接（指示灯颜色依据）
+    private bool _m0Initialized;                   // 本次运行是否已对 PLC 初始化 M0 = OFF
 
     private string _productName = "测试样品";      // 产品名称（默认值，操作员可修改）
     private string _productCode = "SP-0001";       // 产品编号（默认值，操作员可修改）
     private string _tester = string.Empty;         // 试验员（默认取登录账号）
-    private string _setCurrentText = "10.000";     // 设定电流文本（kA）
-    private string _setTimeText = "3.00";          // 设定时间文本（s）
-    private int _station = 1;                      // 当前选择的试验工位（1/2/3）
+    private string _setCurrentText = "10.000";     // 设定电流文本（kA，范围 0~10）
+    private string _setTimeText = "00:03:00";      // 设定时间文本（时:分:秒，内部换算为秒）
+    private const int Station = 1;                 // 试验工位已取消，固定工位 1（写入 D1000/D1002）
 
     private double _currentKa;                     // 实时电流（kA）
     private double _peakKa;                        // 本次试验峰值电流（kA）
-    private double _tripKa;                        // 脱扣电流（kA）
     private double _runTimeSeconds;                // 运行时间（s）
 
     private double _activeSetCurrent = 10;         // 本次试验实际下发的设定电流（kA）
@@ -264,40 +264,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
            && !string.IsNullOrWhiteSpace(SetCurrentText)
            && !string.IsNullOrWhiteSpace(SetTimeText);
 
-    /// <summary>试验工位：1 / 2 / 3，切换时同步刷新三个单选按钮的选中状态。</summary>
-    public int Station
-    {
-        get => _station;
-        set
-        {
-            if (SetProperty(ref _station, value))
-            {
-                OnPropertyChanged(nameof(IsStation1));
-                OnPropertyChanged(nameof(IsStation2));
-                OnPropertyChanged(nameof(IsStation3));
-            }
-        }
-    }
-
-    // 三个工位按钮的双向绑定属性（RadioButton.IsChecked）
-    public bool IsStation1
-    {
-        get => Station == 1;
-        set { if (value) Station = 1; }
-    }
-
-    public bool IsStation2
-    {
-        get => Station == 2;
-        set { if (value) Station = 2; }
-    }
-
-    public bool IsStation3
-    {
-        get => Station == 3;
-        set { if (value) Station = 3; }
-    }
-
     // =====================================================================
     // 三、运行状态与 PLC 连接状态（指示灯 / 文案 / 按钮可用性）
     // =====================================================================
@@ -356,19 +322,22 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         private set => SetProperty(ref _peakKa, value);
     }
 
-    /// <summary>脱扣电流（kA）：PLC 在脱扣瞬间记录的最大电流。</summary>
-    public double TripKa
-    {
-        get => _tripKa;
-        private set => SetProperty(ref _tripKa, value);
-    }
-
     /// <summary>运行时间（s）：读取 D1600（ms）÷1000，随轮询实时刷新。</summary>
     public double RunTimeSeconds
     {
         get => _runTimeSeconds;
-        private set => SetProperty(ref _runTimeSeconds, value);
+        private set
+        {
+            if (SetProperty(ref _runTimeSeconds, value))
+            {
+                OnPropertyChanged(nameof(RunTimeText)); // 运行时间变化 → 同步刷新 时:分:秒 文本
+            }
+        }
     }
+
+    /// <summary>运行时间的显示文本：时:分:秒（如 00:03:25）。</summary>
+    public string RunTimeText
+        => TimeSpan.FromSeconds(Math.Max(RunTimeSeconds, 0)).ToString(@"hh\:mm\:ss");
 
     /// <summary>顶部系统时间文本（秒级刷新）。</summary>
     public string ClockText
@@ -615,11 +584,36 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         {
             PlcConnected = connected;
 
+            // 软件本次运行首次连上 PLC：初始化 M0 = OFF，
+            // 保证第一次运行时工作状态灯为灰色（不点亮），主回路处于断开状态
+            if (connected && !_m0Initialized)
+            {
+                _m0Initialized = true;
+                _ = InitializeMainCircuitOffAsync();
+            }
+
             if (!connected)
             {
                 Logger.Warn("PLC 连接断开，等待自动重连");
             }
         });
+    }
+
+    /// <summary>首次连接时把 M0 置 OFF（工作灯熄灭、主回路断开），失败只记日志。</summary>
+    private async Task InitializeMainCircuitOffAsync()
+    {
+        try
+        {
+            if (_plc is not null)
+            {
+                await _plc.SetMainCircuitAsync(false).ConfigureAwait(false);
+                Logger.Info("首次连接 PLC：已初始化 M0 = OFF（主回路断开，工作灯熄灭）");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("首次连接初始化 M0 = OFF 失败", ex);
+        }
     }
 
     /// <summary>收到一帧 PLC 数据：切到 UI 线程后统一处理。</summary>
@@ -903,7 +897,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             await _plc!.SetMainCircuitAsync(true).ConfigureAwait(true); // M0 = ON
             _chargeDeadline = DateTime.UtcNow.AddSeconds(ChargeTimeoutSeconds); // 40 秒充电超时
             ShowToast(LanguageManager.Get("L.Status.Charging"));
-            Logger.User($"工艺操作：电容充电（工位 {Station}，设定 {SetCurrentText} kA / {SetTimeText} s，超时 {ChargeTimeoutSeconds:F0} 秒）");
+            Logger.User($"工艺操作：电容充电（设定 {SetCurrentText} kA / {SetTimeText}，超时 {ChargeTimeoutSeconds:F0} 秒）");
         }).ConfigureAwait(true);
     }
 
@@ -948,8 +942,15 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             _activeSetCurrent = current;
             _activeSetTime = time;
 
-            // 1) 设定电流 / 时间写入当前工位寄存器（D 区，值 ×1000）
-            await _plc!.WriteTestSettingsAsync(Station, current, time).ConfigureAwait(true);
+            // 1) 设定电流按 offset.json 区间补偿后写入工位 1 寄存器（D1000/D1002，值 ×1000）
+            var factor = OffsetConfigStore.Instance.GetFactor(current);
+            var plcCurrent = Math.Round(current * factor, 3);
+            if (Math.Abs(factor - 1.0) > 1e-9)
+            {
+                Logger.User($"电流补偿：设定 {current:F3} kA 命中区间补偿系数 {factor} → 实际写入 {plcCurrent:F3} kA");
+            }
+
+            await _plc!.WriteTestSettingsAsync(Station, plcCurrent, time).ConfigureAwait(true);
             _plc.ResetPeak(); // 清空峰值统计
 
             // 2) 复位界面与曲线，准备新一轮采集
@@ -962,7 +963,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             _chartRecording = true;                            // ★ 开始向图表记录数据
             Samples.Clear();                                   // 清空上一轮波形
             PeakKa = 0;
-            TripKa = 0;
             CurrentKa = 0;
             RunTimeSeconds = 0;
 
@@ -972,7 +972,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
             // 4) 发送启动电平：只写 M1 = true，无需写 M3
             await _plc!.SetStartTestAsync(true).ConfigureAwait(true);
-            Logger.User($"工艺操作：开始测试 工位 {Station}，{current:F3} kA / {time:F2} s（M1=ON）");
+            Logger.User($"工艺操作：开始测试，{current:F3} kA / {SetTimeText}（M1=ON）");
         }).ConfigureAwait(true);
     }
 
@@ -1032,12 +1032,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             ProductName = ProductName.Trim(),
             ProductCode = ProductCode.Trim(),
             Tester = Tester.Trim(),
-            Station = Station,
             SetCurrentKa = double.TryParse(SetCurrentText, NumberStyles.Float, CultureInfo.InvariantCulture, out var sc) ? sc : 0,
-            SetTimeSeconds = double.TryParse(SetTimeText, NumberStyles.Float, CultureInfo.InvariantCulture, out var st) ? st : 0,
+            SetTimeSeconds = TryParseTimeToSeconds(SetTimeText, out var st) ? st : 0,
             PeakCurrentKa = Math.Round(PeakKa, 3),
-            RunTimeSeconds = RunTimeSeconds,
-            Passed = false
+            RunTimeSeconds = RunTimeSeconds
         };
 
         // CSV 曲线数据：优先用试验快照，没有则用当前图表数据
@@ -1093,15 +1091,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             (LanguageManager.Get("L.History.Col.ProductName"), record.ProductName),
             (LanguageManager.Get("L.History.Col.ProductCode"), record.ProductCode),
             (LanguageManager.Get("L.History.Col.Tester"), record.Tester),
-            (LanguageManager.Get("L.History.Col.Station"), record.Station.ToString(CultureInfo.InvariantCulture)),
             (LanguageManager.Get("L.History.Col.SetCurrent"), record.SetCurrentKa.ToString("F3", CultureInfo.InvariantCulture)),
-            (LanguageManager.Get("L.History.Col.SetTime"), record.SetTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)),
-            (LanguageManager.Get("L.History.Col.TripCurrent"), record.TripCurrentKa.ToString("F3", CultureInfo.InvariantCulture)),
+            (LanguageManager.Get("L.History.Col.SetTime"), TimeSpan.FromSeconds(record.SetTimeSeconds).ToString(@"hh\:mm\:ss")),
             (LanguageManager.Get("L.Readout.PeakCurrent") + " (kA)", record.PeakCurrentKa.ToString("F3", CultureInfo.InvariantCulture)),
-            (LanguageManager.Get("L.History.Col.RunTime"), record.RunTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)),
-            (LanguageManager.Get("L.History.Col.Result"), record.Passed
-                ? LanguageManager.Get("L.Msg.Pass")
-                : LanguageManager.Get("L.Msg.Fail"))
+            (LanguageManager.Get("L.History.Col.RunTime"), record.RunTimeSeconds.ToString("F2", CultureInfo.InvariantCulture))
         };
     }
 
@@ -1119,18 +1112,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         _testWatch.Stop();
         _chartRecording = false;   // ★ 试验结束：停止向图表记录数据
 
-        // 脱扣电流优先取 PLC 记录值；若 PLC 未给出，则用峰值近似
-        var trip = snapshot.TripCurrentKa > 0
-            ? snapshot.TripCurrentKa
-            : Math.Max(PeakKa, snapshot.CurrentKa);
-
-        TripKa = Math.Round(trip, 3);
         RunTimeSeconds = Math.Round(_testWatch.Elapsed.TotalSeconds, 2);
         State = TestState.Completed;
-
-        // 合格判定：脱扣电流与设定值偏差 ≤ 10%
-        var setCurrent = _activeSetCurrent > 0 ? _activeSetCurrent : 10;
-        var passed = trip > 0 && Math.Abs(trip - setCurrent) / setCurrent <= 0.10;
 
         // 组装试验记录（保存按钮可用，等待操作员确认入库）
         _lastRecord = new TestRecord
@@ -1139,13 +1122,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             ProductName = ProductName.Trim(),
             ProductCode = ProductCode.Trim(),
             Tester = Tester.Trim(),
-            Station = Station,
-            SetCurrentKa = setCurrent,
+            SetCurrentKa = _activeSetCurrent,
             SetTimeSeconds = _activeSetTime,
-            TripCurrentKa = Math.Round(trip, 3),
-            PeakCurrentKa = Math.Round(Math.Max(PeakKa, trip), 3),
-            RunTimeSeconds = RunTimeSeconds,
-            Passed = passed
+            PeakCurrentKa = Math.Round(PeakKa, 3),
+            RunTimeSeconds = RunTimeSeconds
         };
         // ★ 立刻快照本次试验的曲线数据：
         //   操作员之后可能重新充电 / 开始新试验（Samples 会被清空），
@@ -1155,8 +1135,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         UpdateCommandStates();
 
-        Logger.Info($"测试完成：脱扣电流 {trip:F3} kA，设定 {setCurrent:F3} kA，结果 {(passed ? "合格" : "不合格")}");
-        ShowToast(LanguageManager.Format("L.Msg.Completed", trip), !passed);
+        Logger.Info($"测试完成：峰值电流 {PeakKa:F3} kA，运行 {RunTimeSeconds:F2} s");
+        ShowToast(LanguageManager.Get("L.Msg.Completed"));
     }
 
     // =====================================================================
@@ -1181,7 +1161,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         return true;
     }
 
-    /// <summary>校验工艺参数输入（产品名称 / 编号 / 试验员必填，电流 0.1~100 kA，时间 0.1~600 s）。</summary>
+    /// <summary>校验工艺参数输入（产品名称 / 编号 / 试验人员必填，电流 0~10 kA，时间 时:分:秒 格式）。</summary>
     private bool TryValidateInputs(out double current, out double time)
     {
         current = 0;
@@ -1205,18 +1185,43 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             return false;
         }
 
-        if (!TryParseNumber(SetCurrentText, out current) || current < 0.1 || current > 100)
+        // 设定电流门限：0 ~ 10 kA
+        if (!TryParseNumber(SetCurrentText, out current) || current < 0 || current > 10)
         {
             ShowToast(LanguageManager.Get("L.Msg.ValidationCurrent"), true);
             return false;
         }
 
-        if (!TryParseNumber(SetTimeText, out time) || time < 0.1 || time > 600)
+        // 设定时间：时:分:秒 格式，换算为秒（大于 0 且不超过 24 小时）
+        if (!TryParseTimeToSeconds(SetTimeText, out time) || time <= 0 || time > 86400)
         {
             ShowToast(LanguageManager.Get("L.Msg.ValidationTime"), true);
             return false;
         }
 
+        return true;
+    }
+
+    /// <summary>把“时:分:秒”文本解析为秒数（兼容 h:mm:ss 与 hh:mm:ss 两种写法）。</summary>
+    private static bool TryParseTimeToSeconds(string text, out double seconds)
+    {
+        seconds = 0;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var ok = TimeSpan.TryParseExact(
+            text.Trim(),
+            new[] { @"hh\:mm\:ss", @"h\:mm\:ss" },
+            CultureInfo.InvariantCulture,
+            out var ts);
+        if (!ok)
+        {
+            return false;
+        }
+
+        seconds = ts.TotalSeconds;
         return true;
     }
 

@@ -1,0 +1,14 @@
+{
+  "ranges": [
+    {
+      "minKa": 0.0,
+      "maxKa": 0.5,
+      "factor": 0.5
+    },
+    {
+      "minKa": 0.5,
+      "maxKa": 0.9,
+      "factor": 0.8
+    }
+  ]
+}

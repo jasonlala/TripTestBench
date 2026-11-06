@@ -33,8 +33,6 @@ public sealed class HistoryViewModel : ObservableObject
     private string _keyword = string.Empty;        // 关键字
     private int _rangeIndex;                       // 时间范围索引：0 全部 / 1 今天 / 2 近 7 天 / 3 近 30 天
     private int _totalCount;                       // 当前筛选结果总数
-    private int _passedCount;                      // 合格数
-    private int _failedCount;                      // 不合格数
     private string _statusMessage = string.Empty;  // 底部状态提示（导出 / 打印结果）
     private bool _statusIsError;                   // 状态提示是否为错误
     private TestRecord? _selectedRecord;           // 当前选中行（双击查看曲线用）
@@ -93,18 +91,6 @@ public sealed class HistoryViewModel : ObservableObject
     {
         get => _totalCount;
         private set => SetProperty(ref _totalCount, value);
-    }
-
-    public int PassedCount
-    {
-        get => _passedCount;
-        private set => SetProperty(ref _passedCount, value);
-    }
-
-    public int FailedCount
-    {
-        get => _failedCount;
-        private set => SetProperty(ref _failedCount, value);
     }
 
     /// <summary>结果为空（界面显示“暂无符合条件的记录”）。</summary>
@@ -195,8 +181,6 @@ public sealed class HistoryViewModel : ObservableObject
 
         // 6) 刷新统计与空状态
         TotalCount = result.Count;
-        PassedCount = result.Count(r => r.Passed);
-        FailedCount = TotalCount - PassedCount;
         OnPropertyChanged(nameof(IsEmpty));
     }
 
@@ -230,12 +214,12 @@ public sealed class HistoryViewModel : ObservableObject
         }
     }
 
-    /// <summary>导出当前筛选结果为 Excel（含曲线截图列），弹出“另存为”对话框选择保存位置。</summary>
+    /// <summary>导出选中的记录为 Excel（含曲线截图列），弹出“另存为”对话框选择保存位置。</summary>
     private void ExportExcel()
     {
-        if (Items.Count == 0)
+        if (SelectedRecord is null)
         {
-            SetStatus(LanguageManager.Get("L.Msg.NoExportData"), true);
+            SetStatus(LanguageManager.Get("L.Msg.NoSelectedRecord"), true);
             return;
         }
 
@@ -266,7 +250,7 @@ public sealed class HistoryViewModel : ObservableObject
             headers.Add(LanguageManager.Get("L.History.Col.Chart"));
 
             var path = _repository.ExportExcel(
-                Items,
+                new[] { SelectedRecord },
                 headers,
                 LanguageManager.Get("L.History.SheetName"),
                 includeChart: true,
@@ -283,12 +267,12 @@ public sealed class HistoryViewModel : ObservableObject
         }
     }
 
-    /// <summary>把当前筛选结果发送到打印机（A4 横向报表）。</summary>
+    /// <summary>把选中的记录发送到打印机（A4 横向报表）。</summary>
     private void Print()
     {
-        if (Items.Count == 0)
+        if (SelectedRecord is null)
         {
-            SetStatus(LanguageManager.Get("L.Msg.NoExportData"), true);
+            SetStatus(LanguageManager.Get("L.Msg.NoSelectedRecord"), true);
             return;
         }
 
@@ -296,12 +280,12 @@ public sealed class HistoryViewModel : ObservableObject
         {
             var subtitle = LanguageManager.Format(
                 "L.Print.Subtitle",
-                Items.Count,
+                1,
                 DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
 
-            // 打印时把每条记录的曲线截图一并输出（列表里未加载 BLOB，按 Id 现取）
+            // 打印时把记录的曲线截图一并输出（列表里未加载 BLOB，按 Id 现取）
             var printed = PrintService.PrintRecords(
-                Items.ToList(),
+                new List<TestRecord> { SelectedRecord },
                 BuildDataHeaders(),
                 LanguageManager.Get("L.Print.Title"),
                 subtitle,
@@ -351,13 +335,10 @@ public sealed class HistoryViewModel : ObservableObject
             LanguageManager.Get("L.History.Col.ProductName"),
             LanguageManager.Get("L.History.Col.ProductCode"),
             LanguageManager.Get("L.History.Col.Tester"),
-            LanguageManager.Get("L.History.Col.Station"),
             LanguageManager.Get("L.History.Col.SetCurrent"),
             LanguageManager.Get("L.History.Col.SetTime"),
-            LanguageManager.Get("L.History.Col.TripCurrent"),
             LanguageManager.Get("L.Readout.PeakCurrent") + " (kA)",
-            LanguageManager.Get("L.History.Col.RunTime"),
-            LanguageManager.Get("L.History.Col.Result")
+            LanguageManager.Get("L.History.Col.RunTime")
         };
     }
 

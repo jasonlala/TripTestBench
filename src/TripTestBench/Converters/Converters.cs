@@ -67,6 +67,16 @@ public sealed class StationToTextConverter : IValueConverter
         => Binding.DoNothing;
 }
 
+/// <summary>秒数（double）→ “时:分:秒” 文本（如 95 → 00:01:35）。</summary>
+public sealed class SecondsToTimeConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => TimeSpan.FromSeconds(value is double s ? Math.Max(s, 0) : 0).ToString(@"hh\:mm\:ss");
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => Binding.DoNothing;
+}
+
 /// <summary>用于分段按钮：当前值与参数相等时返回 true（选中）。</summary>
 public sealed class IntEqualsConverter : IValueConverter
 {

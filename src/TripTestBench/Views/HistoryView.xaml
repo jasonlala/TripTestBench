@@ -6,10 +6,8 @@
 
     <UserControl.Resources>
         <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
-        <conv:PassedToTextConverter x:Key="PassedToText" />
-        <conv:PassedToBrushConverter x:Key="PassedToBrush" />
         <conv:IntEqualsConverter x:Key="IntEquals" />
-        <conv:StationToTextConverter x:Key="StationToText" />
+        <conv:SecondsToTimeConverter x:Key="SecondsToTime" />
         <conv:ErrorToBrushConverter x:Key="ErrorToBrush" />
     </UserControl.Resources>
 
@@ -140,26 +138,6 @@
                                    Foreground="{StaticResource B.Accent}" />
                     </StackPanel>
                 </Border>
-                <Border Style="{StaticResource CardAlt}" Width="170" Padding="18,10" Margin="12,0,0,0">
-                    <StackPanel>
-                        <TextBlock Text="{DynamicResource L.History.Passed}" Style="{StaticResource CaptionText}" />
-                        <TextBlock Text="{Binding PassedCount}"
-                                   FontFamily="Consolas"
-                                   FontSize="24"
-                                   FontWeight="Bold"
-                                   Foreground="{StaticResource B.Success}" />
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource CardAlt}" Width="170" Padding="18,10" Margin="12,0,0,0">
-                    <StackPanel>
-                        <TextBlock Text="{DynamicResource L.History.Failed}" Style="{StaticResource CaptionText}" />
-                        <TextBlock Text="{Binding FailedCount}"
-                                   FontFamily="Consolas"
-                                   FontSize="24"
-                                   FontWeight="Bold"
-                                   Foreground="{StaticResource B.Danger}" />
-                    </StackPanel>
-                </Border>
             </StackPanel>
 
             <!-- 记录列表 -->
@@ -177,53 +155,33 @@
                                                 Width="168" />
                             <DataGridTextColumn Header="{DynamicResource L.History.Col.ProductName}"
                                                 Binding="{Binding ProductName}"
-                                                Width="*" />
+                                                Width="160" />
                             <DataGridTextColumn Header="{DynamicResource L.History.Col.ProductCode}"
                                                 Binding="{Binding ProductCode}"
-                                                Width="*" />
+                                                Width="160" />
                             <DataGridTextColumn Header="{DynamicResource L.History.Col.Tester}"
                                                 Binding="{Binding Tester}"
                                                 Width="90" />
-                            <DataGridTextColumn Header="{DynamicResource L.History.Col.Station}"
-                                                Binding="{Binding Station, Converter={StaticResource StationToText}}"
-                                                Width="80" />
                             <DataGridTextColumn Header="{DynamicResource L.History.Col.SetCurrent}"
                                                 Binding="{Binding SetCurrentKa, StringFormat={}{0:F3}}"
                                                 Width="112" />
                             <DataGridTextColumn Header="{DynamicResource L.History.Col.SetTime}"
-                                                Binding="{Binding SetTimeSeconds, StringFormat={}{0:F2}}"
+                                                Binding="{Binding SetTimeSeconds, Converter={StaticResource SecondsToTime}}"
                                                 Width="104" />
-                            <DataGridTextColumn Header="{DynamicResource L.History.Col.TripCurrent}"
-                                                Binding="{Binding TripCurrentKa, StringFormat={}{0:F3}}"
-                                                Width="112" />
                             <DataGridTextColumn Header="{DynamicResource L.History.Col.RunTime}"
                                                 Binding="{Binding RunTimeSeconds, StringFormat={}{0:F2}}"
                                                 Width="104" />
-                            <DataGridTemplateColumn Header="{DynamicResource L.History.Col.Result}" Width="90">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Ellipse Width="7" Height="7"
-                                                     Fill="{Binding Passed, Converter={StaticResource PassedToBrush}}"
-                                                     VerticalAlignment="Center"
-                                                     Margin="0,0,6,0" />
-                                            <TextBlock Text="{Binding Passed, Converter={StaticResource PassedToText}}"
-                                                       Foreground="{Binding Passed, Converter={StaticResource PassedToBrush}}"
-                                                       FontSize="12"
-                                                       FontWeight="SemiBold" />
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
 
                             <!-- 曲线截图：有截图时显示“查看”按钮，点击弹出预览 -->
-                            <DataGridTemplateColumn Header="{DynamicResource L.History.Col.Chart}" Width="86">
+                            <DataGridTemplateColumn Header="{DynamicResource L.History.Col.Chart}" Width="100">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Content="{DynamicResource L.Button.ViewChart}"
                                                 Style="{StaticResource GhostButton}"
                                                 Height="24"
-                                                Padding="8,0"
+                                                Width="72"
+                                                HorizontalAlignment="Center"
+                                                Padding="0"
                                                 FontSize="11"
                                                 Command="{Binding DataContext.ViewChartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"

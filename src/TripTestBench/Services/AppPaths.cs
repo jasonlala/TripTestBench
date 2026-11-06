@@ -22,8 +22,14 @@ public static class AppPaths
     /// <summary>旧的 JSON 记录文件（仅用于首次启动时迁移到 SQLite）。</summary>
     public static string RecordsFile => Path.Combine(DataDir, "records.json");
 
-    /// <summary>SQLite 试验数据库文件：试验记录 + 曲线截图。</summary>
-    public static string DatabaseFile => Path.Combine(DataDir, "triptestbench.db");
+    /// <summary>
+    /// SQLite 试验数据库文件：试验记录 + 曲线截图。
+    /// 与 exe 同目录（publish 目录），现场备份数据更直观。
+    /// </summary>
+    public static string DatabaseFile => Path.Combine(AppContext.BaseDirectory, "triptestbench.db");
+
+    /// <summary>旧版数据库文件位置：%LOCALAPPDATA%\TripTestBench\triptestbench.db（仅用于迁移）。</summary>
+    public static string LegacyDatabaseFile => Path.Combine(DataDir, "triptestbench.db");
 
     /// <summary>登录账户文件。</summary>
     public static string UsersFile => Path.Combine(DataDir, "users.json");
@@ -41,6 +47,9 @@ public static class AppPaths
 
     /// <summary>配置文件：与 exe 同目录，方便现场用记事本修改。</summary>
     public static string ConfigFile => Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+
+    /// <summary>电流补偿区间配置文件：与 exe 同目录（现场可直接增删区间组）。</summary>
+    public static string OffsetConfigFile => Path.Combine(AppContext.BaseDirectory, "offset.json");
 
     /// <summary>导出目录：优先桌面；没有桌面目录（如服务账户）时退回数据目录。</summary>
     public static string ExportDir

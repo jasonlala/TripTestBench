@@ -1,7 +1,7 @@
 // ============================================================================
 // 文件：RecordDatabase.cs
 // 作用：SQLite 试验数据库的底层访问（建表、写入、查询、读取截图）。
-//       数据库文件：%LOCALAPPDATA%\TripTestBench\triptestbench.db
+//       数据库文件：exe 同目录 triptestbench.db（旧版在 %LOCALAPPDATA%，首次启动自动迁移）
 //       表结构：TestRecords —— 一条记录一行，最后两列为说明字段与曲线截图：
 //               · Remark      TEXT  备注
 //               · ChartImage  BLOB  本次试验的电流曲线截图（PNG 原始字节）
@@ -37,6 +37,7 @@ public sealed class RecordDatabase
     public RecordDatabase(string databaseFile)
     {
         AppPaths.EnsureDataDir();
+        MigrateLegacyDatabaseFile(databaseFile);
 
         var directory = Path.GetDirectoryName(databaseFile);
         if (!string.IsNullOrWhiteSpace(directory))
@@ -59,6 +60,44 @@ public sealed class RecordDatabase
 
     /// <summary>数据库文件完整路径（日志与界面提示用）。</summary>
     public string FilePath { get; }
+
+    /// <summary>
+    /// 旧版升级：数据库原先存在 %LOCALAPPDATA%\TripTestBench 下，
+    /// 新版本改放在 exe 同目录。首次用新版本启动时把旧库（含 -wal/-shm）
+    /// 整体移动到新位置，历史记录与曲线截图不丢失。
+    /// </summary>
+    private static void MigrateLegacyDatabaseFile(string newFile)
+    {
+        try
+        {
+            var legacy = AppPaths.LegacyDatabaseFile;
+            if (string.Equals(
+                    Path.GetFullPath(legacy),
+                    Path.GetFullPath(newFile),
+                    StringComparison.OrdinalIgnoreCase)
+                || !File.Exists(legacy)
+                || File.Exists(newFile))
+            {
+                return; // 同一路径 / 旧库不存在 / 新库已存在，均无需迁移
+            }
+
+            File.Move(legacy, newFile);
+            foreach (var suffix in new[] { "-wal", "-shm" })
+            {
+                var side = legacy + suffix;
+                if (File.Exists(side))
+                {
+                    File.Move(side, newFile + suffix);
+                }
+            }
+
+            Logger.Info($"已将数据库从 {legacy} 迁移到 {newFile}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("迁移旧数据库文件失败", ex);
+        }
+    }
 
     /// <summary>打开一个连接（调用方负责释放）。</summary>
     private SqliteConnection Open()
@@ -84,13 +123,10 @@ public sealed class RecordDatabase
                 ProductName    TEXT    NOT NULL DEFAULT '',
                 ProductCode    TEXT    NOT NULL DEFAULT '',
                 Tester         TEXT    NOT NULL DEFAULT '',
-                Station        INTEGER NOT NULL DEFAULT 1,
                 SetCurrentKa   REAL    NOT NULL DEFAULT 0,
                 SetTimeSeconds REAL    NOT NULL DEFAULT 0,
-                TripCurrentKa  REAL    NOT NULL DEFAULT 0,
                 PeakCurrentKa  REAL    NOT NULL DEFAULT 0,
                 RunTimeSeconds REAL    NOT NULL DEFAULT 0,
-                Passed         INTEGER NOT NULL DEFAULT 0,
                 Remark         TEXT    NOT NULL DEFAULT '',
                 ChartImage     BLOB
             );
@@ -100,6 +136,28 @@ public sealed class RecordDatabase
             """;
 
         command.ExecuteNonQuery();
+        DropLegacyColumns(connection);
+    }
+
+    /// <summary>
+    /// 旧版本数据库已取消的列（工位 / 脱扣电流 / 结果）：存在则删除，老库无损升级。
+    /// </summary>
+    private static void DropLegacyColumns(SqliteConnection connection)
+    {
+        foreach (var column in new[] { "Station", "TripCurrentKa", "Passed" })
+        {
+            using var check = connection.CreateCommand();
+            check.CommandText =
+                $"SELECT COUNT(1) FROM pragma_table_info('TestRecords') WHERE name = '{column}'";
+            if (Convert.ToInt32(check.ExecuteScalar(), CultureInfo.InvariantCulture) == 0)
+            {
+                continue;
+            }
+
+            using var drop = connection.CreateCommand();
+            drop.CommandText = $"ALTER TABLE TestRecords DROP COLUMN {column}";
+            drop.ExecuteNonQuery();
+        }
     }
 
     /// <summary>当前记录总数（迁移判断与界面统计用）。</summary>
@@ -123,13 +181,13 @@ public sealed class RecordDatabase
 
         command.CommandText = """
             INSERT INTO TestRecords
-                (Id, TestTime, ProductName, ProductCode, Tester, Station,
-                 SetCurrentKa, SetTimeSeconds, TripCurrentKa, PeakCurrentKa,
-                 RunTimeSeconds, Passed, Remark, ChartImage)
+                (Id, TestTime, ProductName, ProductCode, Tester,
+                 SetCurrentKa, SetTimeSeconds, PeakCurrentKa,
+                 RunTimeSeconds, Remark, ChartImage)
             VALUES
-                ($id, $time, $name, $code, $tester, $station,
-                 $setCurrent, $setTime, $trip, $peak,
-                 $runTime, $passed, $remark, $chart)
+                ($id, $time, $name, $code, $tester,
+                 $setCurrent, $setTime, $peak,
+                 $runTime, $remark, $chart)
             """;
 
         command.Parameters.AddWithValue("$id", record.Id);
@@ -137,13 +195,10 @@ public sealed class RecordDatabase
         command.Parameters.AddWithValue("$name", record.ProductName ?? string.Empty);
         command.Parameters.AddWithValue("$code", record.ProductCode ?? string.Empty);
         command.Parameters.AddWithValue("$tester", record.Tester ?? string.Empty);
-        command.Parameters.AddWithValue("$station", record.Station);
         command.Parameters.AddWithValue("$setCurrent", record.SetCurrentKa);
         command.Parameters.AddWithValue("$setTime", record.SetTimeSeconds);
-        command.Parameters.AddWithValue("$trip", record.TripCurrentKa);
         command.Parameters.AddWithValue("$peak", record.PeakCurrentKa);
         command.Parameters.AddWithValue("$runTime", record.RunTimeSeconds);
-        command.Parameters.AddWithValue("$passed", record.Passed ? 1 : 0);
         command.Parameters.AddWithValue("$remark", record.Remark ?? string.Empty);
         command.Parameters.AddWithValue("$chart", (object?)chartImage ?? DBNull.Value);
 
@@ -162,9 +217,9 @@ public sealed class RecordDatabase
 
         // CASE 判断截图是否存在，避免把 BLOB 整块读出来
         command.CommandText = """
-            SELECT Id, TestTime, ProductName, ProductCode, Tester, Station,
-                   SetCurrentKa, SetTimeSeconds, TripCurrentKa, PeakCurrentKa,
-                   RunTimeSeconds, Passed, Remark,
+            SELECT Id, TestTime, ProductName, ProductCode, Tester,
+                   SetCurrentKa, SetTimeSeconds, PeakCurrentKa,
+                   RunTimeSeconds, Remark,
                    CASE WHEN ChartImage IS NULL OR length(ChartImage) = 0 THEN 0 ELSE 1 END AS HasChart
             FROM TestRecords
             ORDER BY TestTime DESC
@@ -180,15 +235,12 @@ public sealed class RecordDatabase
                 ProductName = reader.GetString(2),
                 ProductCode = reader.GetString(3),
                 Tester = reader.GetString(4),
-                Station = reader.GetInt32(5),
-                SetCurrentKa = reader.GetDouble(6),
-                SetTimeSeconds = reader.GetDouble(7),
-                TripCurrentKa = reader.GetDouble(8),
-                PeakCurrentKa = reader.GetDouble(9),
-                RunTimeSeconds = reader.GetDouble(10),
-                Passed = reader.GetInt32(11) != 0,
-                Remark = reader.GetString(12),
-                HasChartImage = reader.GetInt32(13) != 0
+                SetCurrentKa = reader.GetDouble(5),
+                SetTimeSeconds = reader.GetDouble(6),
+                PeakCurrentKa = reader.GetDouble(7),
+                RunTimeSeconds = reader.GetDouble(8),
+                Remark = reader.GetString(9),
+                HasChartImage = reader.GetInt32(10) != 0
             });
         }
 

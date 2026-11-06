@@ -129,13 +129,10 @@ public sealed class RecordRepository
                 r.ProductName,
                 r.ProductCode,
                 r.Tester,
-                r.Station.ToString(CultureInfo.InvariantCulture),
                 r.SetCurrentKa.ToString("F3", CultureInfo.InvariantCulture),
-                r.SetTimeSeconds.ToString("F2", CultureInfo.InvariantCulture),
-                r.TripCurrentKa.ToString("F3", CultureInfo.InvariantCulture),
+                TimeSpan.FromSeconds(r.SetTimeSeconds).ToString(@"hh\:mm\:ss"),
                 r.PeakCurrentKa.ToString("F3", CultureInfo.InvariantCulture),
-                r.RunTimeSeconds.ToString("F2", CultureInfo.InvariantCulture),
-                r.Passed ? "PASS" : "FAIL"
+                r.RunTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)
             }.Select(Escape)));
         }
 
@@ -198,13 +195,10 @@ public sealed class RecordRepository
                 record.ProductName,
                 record.ProductCode,
                 record.Tester,
-                record.Station,
                 Math.Round(record.SetCurrentKa, 3),
-                Math.Round(record.SetTimeSeconds, 2),
-                Math.Round(record.TripCurrentKa, 3),
+                TimeSpan.FromSeconds(record.SetTimeSeconds).ToString(@"hh\:mm\:ss"),
                 Math.Round(record.PeakCurrentKa, 3),
-                Math.Round(record.RunTimeSeconds, 2),
-                record.Passed ? passText : failText
+                Math.Round(record.RunTimeSeconds, 2)
             };
 
             for (var column = 0; column < values.Count && column < dataColumnCount; column++)
@@ -213,12 +207,6 @@ public sealed class RecordRepository
                 cell.Value = values[column];
                 cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             }
-
-            // 结果列着色：合格绿色、不合格红色
-            var resultCell = sheet.Cell(rowIndex, values.Count);
-            resultCell.Style.Font.FontColor = record.Passed
-                ? XLColor.FromHtml("#12805C")
-                : XLColor.FromHtml("#C0392B");
 
             // 3) 曲线截图列：读取 BLOB 后贴到对应行最后一列
             if (includeChart)
@@ -238,8 +226,19 @@ public sealed class RecordRepository
             rowIndex++;
         }
 
-        // 4) 列宽：数据列自适应，截图列固定宽度
-        sheet.Columns(1, dataColumnCount).AdjustToContents();
+        // 4) 列宽：按单元格内容显示宽度手动计算（中文/全角按 2 个字符宽计），
+        //    不依赖 AdjustToContents（其对中文与合并样式的测量在现场环境不稳定），
+        //    保证导出的 Excel 列宽始终与内容匹配。
+        for (var column = 1; column <= dataColumnCount; column++)
+        {
+            var maxUnits = 6d; // 最小宽度下限
+            for (var row = 1; row <= Math.Max(1, rowIndex - 1); row++)
+            {
+                maxUnits = Math.Max(maxUnits, MeasureDisplayUnits(sheet.Cell(row, column).GetString()));
+            }
+
+            sheet.Column(column).Width = Math.Min(maxUnits + 3, 60); // 留 3 字符边距，封顶 60
+        }
         if (includeChart)
         {
             sheet.Column(headers.Count).Width = 24;
@@ -396,6 +395,21 @@ public sealed class RecordRepository
         var chars = value.Trim().Select(c => invalid.Contains(c) ? '_' : c).ToArray();
         var name = new string(chars);
         return name.Length > 31 ? name[..31] : name;
+    }
+
+    /// <summary>
+    /// 测量文本的显示宽度（单位≈半角字符数）：中文 / 全角字符按 2 计，
+    /// 用于导出 Excel 时按内容计算列宽。
+    /// </summary>
+    private static double MeasureDisplayUnits(string text)
+    {
+        var units = 0d;
+        foreach (var c in text)
+        {
+            units += c > 0xFF ? 2 : 1; // CJK / 全角符号宽度加倍
+        }
+
+        return units;
     }
 
     /// <summary>CSV 字段转义：包含逗号 / 引号 / 换行时用双引号包裹并转义内部引号。</summary>

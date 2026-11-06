@@ -3,12 +3,13 @@
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
 
     <!-- ===== 应用 ===== -->
-    <sys:String x:Key="L.App.Title">过流脱扣试验台</sys:String>
+    <sys:String x:Key="L.App.Title">智能直流大电流发生器</sys:String>
     <sys:String x:Key="L.App.Subtitle">工业控制与数据采集系统</sys:String>
     <sys:String x:Key="L.App.Version">版本 1.0.0</sys:String>
 
     <!-- ===== 窗口 ===== -->
     <sys:String x:Key="L.Window.Minimize">最小化</sys:String>
+    <sys:String x:Key="L.Window.Maximize">最大化 / 还原</sys:String>
     <sys:String x:Key="L.Window.Close">关闭</sys:String>
 
     <!-- ===== 登录 ===== -->
@@ -40,7 +41,7 @@
 
     <sys:String x:Key="L.Field.ProductName">产品名称</sys:String>
     <sys:String x:Key="L.Field.ProductCode">产品编号</sys:String>
-    <sys:String x:Key="L.Field.Tester">试验员</sys:String>
+    <sys:String x:Key="L.Field.Tester">试验人员</sys:String>
     <sys:String x:Key="L.Field.SetCurrent">设定电流</sys:String>
     <sys:String x:Key="L.Field.SetTime">设定时间</sys:String>
     <sys:String x:Key="L.Field.Station">试验工位</sys:String>
@@ -93,9 +94,9 @@
     <sys:String x:Key="L.Msg.ValidationTitle">输入校验</sys:String>
     <sys:String x:Key="L.Msg.ValidationProductName">请输入产品名称</sys:String>
     <sys:String x:Key="L.Msg.ValidationProductCode">请输入产品编号</sys:String>
-    <sys:String x:Key="L.Msg.ValidationTester">请输入试验员</sys:String>
-    <sys:String x:Key="L.Msg.ValidationCurrent">设定电流须为 0.1 ~ 100 kA 之间的数字</sys:String>
-    <sys:String x:Key="L.Msg.ValidationTime">设定时间须为 0.1 ~ 600 s 之间的数字</sys:String>
+    <sys:String x:Key="L.Msg.ValidationTester">请输入试验人员</sys:String>
+    <sys:String x:Key="L.Msg.ValidationCurrent">设定电流须为 0 ~ 10 kA 之间的数字</sys:String>
+    <sys:String x:Key="L.Msg.ValidationTime">设定时间须为 时:分:秒 格式（如 00:05:00）</sys:String>
     <sys:String x:Key="L.Msg.Saved">试验记录已保存</sys:String>
     <sys:String x:Key="L.Msg.SavedFile">当前试验数据已保存到：{0}</sys:String>
     <sys:String x:Key="L.Msg.SavedDb">当前试验数据已保存到数据库（含曲线截图）</sys:String>
@@ -108,7 +109,7 @@
     <sys:String x:Key="L.Msg.AlarmActive">存在急停信号，禁止操作</sys:String>
     <sys:String x:Key="L.Msg.ConnectionOk">PLC 连接成功</sys:String>
     <sys:String x:Key="L.Msg.ConnectionFail">PLC 连接失败：{0}</sys:String>
-    <sys:String x:Key="L.Msg.Completed">测试完成，脱扣电流 {0:F3} kA</sys:String>
+    <sys:String x:Key="L.Msg.Completed">测试完成</sys:String>
     <sys:String x:Key="L.Msg.Pass">合格</sys:String>
     <sys:String x:Key="L.Msg.Fail">不合格</sys:String>
     <sys:String x:Key="L.Msg.Emergency">急停信号触发，设备已停止</sys:String>
@@ -117,6 +118,7 @@
     <sys:String x:Key="L.Msg.Exported">已导出到：{0}</sys:String>
     <sys:String x:Key="L.Msg.ExportFailed">导出失败：{0}</sys:String>
     <sys:String x:Key="L.Msg.NoExportData">没有可导出的记录</sys:String>
+    <sys:String x:Key="L.Msg.NoSelectedRecord">请先在列表中选中一条记录</sys:String>
     <sys:String x:Key="L.Msg.ExportedExcel">已导出 Excel：{0}</sys:String>
     <sys:String x:Key="L.Dialog.SaveExcel">导出 Excel</sys:String>
     <sys:String x:Key="L.Dialog.ExcelFilter">Excel 工作簿 (*.xlsx)|*.xlsx</sys:String>
@@ -125,7 +127,7 @@
     <sys:String x:Key="L.Msg.NoChartImage">该记录未保存曲线截图</sys:String>
 
     <!-- 打印报表 -->
-    <sys:String x:Key="L.Print.Title">过流脱扣试验记录</sys:String>
+    <sys:String x:Key="L.Print.Title">智能直流大电流发生器试验记录</sys:String>
     <sys:String x:Key="L.Print.Subtitle">共 {0} 条记录，打印时间 {1}</sys:String>
     <sys:String x:Key="L.Msg.Testing">测试进行中，请稍候</sys:String>
 
@@ -141,12 +143,12 @@
     <sys:String x:Key="L.History.Range.Week">近 7 天</sys:String>
     <sys:String x:Key="L.History.Range.Month">近 30 天</sys:String>
     <sys:String x:Key="L.History.Keyword">关键字</sys:String>
-    <sys:String x:Key="L.History.KeywordHint">产品名称 / 产品编号 / 试验员</sys:String>
+    <sys:String x:Key="L.History.KeywordHint">产品名称 / 产品编号 / 试验人员</sys:String>
     <sys:String x:Key="L.History.Col.Index">序号</sys:String>
     <sys:String x:Key="L.History.Col.Time">测试时间</sys:String>
     <sys:String x:Key="L.History.Col.ProductName">产品名称</sys:String>
     <sys:String x:Key="L.History.Col.ProductCode">产品编号</sys:String>
-    <sys:String x:Key="L.History.Col.Tester">试验员</sys:String>
+    <sys:String x:Key="L.History.Col.Tester">试验人员</sys:String>
     <sys:String x:Key="L.History.Col.Station">工位</sys:String>
     <sys:String x:Key="L.History.Col.SetCurrent">设定电流 (kA)</sys:String>
     <sys:String x:Key="L.History.Col.SetTime">设定时间 (s)</sys:String>

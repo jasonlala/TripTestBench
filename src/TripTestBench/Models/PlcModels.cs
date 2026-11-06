@@ -19,9 +19,6 @@ public sealed record PlcSnapshot
     /// <summary>实时电流 (kA)，对应 D1520 / 1000。</summary>
     public double CurrentKa { get; init; }
 
-    /// <summary>脱扣电流 (kA)，对应 D1550 / 1000。</summary>
-    public double TripCurrentKa { get; init; }
-
     /// <summary>运行时间 (s)，对应 D1600 / 1000。</summary>
     public double RunTimeSeconds { get; init; }
 
@@ -110,9 +107,6 @@ public static class PlcPoints
     // ---------------- 保持寄存器（D 区：0x03 读 / 0x06、0x10 写） ----------------
     /// <summary>实时电流 D1520（32 位 int，占 D1520~D1521，原始值 A，÷1000 = kA）。</summary>
     public const int D_RealtimeCurrent = 1520;
-
-    /// <summary>脱扣电流 D1550（值 ÷1000 = kA）。</summary>
-    public const int D_TripCurrent = 1550;
 
     /// <summary>运行时间 D1600（32 位 int，占 D1600~D1601，原始值 ms，÷1000 = s）。</summary>
     public const int D_RunTime = 1600;

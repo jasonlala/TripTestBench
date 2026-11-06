@@ -62,6 +62,59 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// 窗口句柄就绪：挂接 WndProc 钩子，修正无边框窗口最大化时
+    /// 盖住 Windows 任务栏的问题（把最大化范围限制到工作区内）。
+    /// </summary>
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        System.Windows.Interop.HwndSource.FromHwnd(hwnd)?.AddHook(WndProc);
+    }
+
+    /// <summary>拦截 WM_GETMINMAXINFO：最大化尺寸 = 屏幕工作区（不覆盖任务栏）。</summary>
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        const int WM_GETMINMAXINFO = 0x0024;
+        if (msg != WM_GETMINMAXINFO)
+        {
+            return IntPtr.Zero;
+        }
+
+        var mmi = System.Runtime.InteropServices.Marshal.PtrToStructure<MinMaxInfo>(lParam);
+        var work = SystemParameters.WorkArea;
+        var transform = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformToDevice
+                        ?? System.Windows.Media.Matrix.Identity;
+        mmi.ptMaxPosition.x = (int)Math.Round(work.Left * transform.M11);
+        mmi.ptMaxPosition.y = (int)Math.Round(work.Top * transform.M22);
+        mmi.ptMaxSize.x = (int)Math.Round(work.Width * transform.M11);
+        mmi.ptMaxSize.y = (int)Math.Round(work.Height * transform.M22);
+
+        System.Runtime.InteropServices.Marshal.StructureToPtr(mmi, lParam, true);
+        handled = true;
+        return IntPtr.Zero;
+    }
+
+    /// <summary>Win32 MINMAXINFO 结构（物理像素）。</summary>
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct MinMaxInfo
+    {
+        public Point ptReserved;
+        public Point ptMaxSize;
+        public Point ptMaxPosition;
+        public Point ptMinTrackSize;
+        public Point ptMaxTrackSize;
+    }
+
+    /// <summary>Win32 POINT 结构。</summary>
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct Point
+    {
+        public int x;
+        public int y;
+    }
+
     /// <summary>显示登录界面：释放主界面资源，创建新的登录 VM。</summary>
     private void ShowLogin()
     {
@@ -187,6 +240,19 @@ public partial class MainWindow : Window
 
     /// <summary>最小化窗口。</summary>
     private void Minimize_OnClick(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    /// <summary>最大化 / 还原窗口（标题栏按钮）。</summary>
+    private void Maximize_OnClick(object sender, RoutedEventArgs e) => ToggleMaximize();
+
+    /// <summary>窗口状态变化：切换最大化 / 还原按钮图标。</summary>
+    protected override void OnStateChanged(EventArgs e)
+    {
+        base.OnStateChanged(e);
+        if (MaximizeButton is not null)
+        {
+            MaximizeButton.Content = WindowState == WindowState.Maximized ? "❐" : "□";
+        }
+    }
 
     /// <summary>关闭窗口（走 OnClosing 的安全确认）。</summary>
     private void Close_OnClick(object sender, RoutedEventArgs e) => Close();

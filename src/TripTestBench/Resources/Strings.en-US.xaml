@@ -3,12 +3,13 @@
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
 
     <!-- ===== Application ===== -->
-    <sys:String x:Key="L.App.Title">Over-Current Trip Test Bench</sys:String>
+    <sys:String x:Key="L.App.Title">Smart DC High-Current Generator</sys:String>
     <sys:String x:Key="L.App.Subtitle">Industrial Control &amp; Data Acquisition System</sys:String>
     <sys:String x:Key="L.App.Version">Version 1.0.0</sys:String>
 
     <!-- ===== Window ===== -->
     <sys:String x:Key="L.Window.Minimize">Minimize</sys:String>
+    <sys:String x:Key="L.Window.Maximize">Maximize / Restore</sys:String>
     <sys:String x:Key="L.Window.Close">Close</sys:String>
 
     <!-- ===== Login ===== -->
@@ -40,7 +41,7 @@
 
     <sys:String x:Key="L.Field.ProductName">Product Name</sys:String>
     <sys:String x:Key="L.Field.ProductCode">Product Code</sys:String>
-    <sys:String x:Key="L.Field.Tester">Tester</sys:String>
+    <sys:String x:Key="L.Field.Tester">Test Personnel</sys:String>
     <sys:String x:Key="L.Field.SetCurrent">Set Current</sys:String>
     <sys:String x:Key="L.Field.SetTime">Set Time</sys:String>
     <sys:String x:Key="L.Field.Station">Station</sys:String>
@@ -93,9 +94,9 @@
     <sys:String x:Key="L.Msg.ValidationTitle">Validation</sys:String>
     <sys:String x:Key="L.Msg.ValidationProductName">Please enter product name</sys:String>
     <sys:String x:Key="L.Msg.ValidationProductCode">Please enter product code</sys:String>
-    <sys:String x:Key="L.Msg.ValidationTester">Please enter tester</sys:String>
-    <sys:String x:Key="L.Msg.ValidationCurrent">Set current must be a number between 0.1 and 100 kA</sys:String>
-    <sys:String x:Key="L.Msg.ValidationTime">Set time must be a number between 0.1 and 600 s</sys:String>
+    <sys:String x:Key="L.Msg.ValidationTester">Please enter test personnel</sys:String>
+    <sys:String x:Key="L.Msg.ValidationCurrent">Set current must be a number between 0 and 10 kA</sys:String>
+    <sys:String x:Key="L.Msg.ValidationTime">Set time must be in hh:mm:ss format (e.g. 00:05:00)</sys:String>
     <sys:String x:Key="L.Msg.Saved">Test record saved</sys:String>
     <sys:String x:Key="L.Msg.SavedFile">Current test data saved to: {0}</sys:String>
     <sys:String x:Key="L.Msg.SavedDb">Current test data saved to database (with chart image)</sys:String>
@@ -108,7 +109,7 @@
     <sys:String x:Key="L.Msg.AlarmActive">E-Stop is active. Operation blocked.</sys:String>
     <sys:String x:Key="L.Msg.ConnectionOk">PLC connected</sys:String>
     <sys:String x:Key="L.Msg.ConnectionFail">PLC connection failed: {0}</sys:String>
-    <sys:String x:Key="L.Msg.Completed">Test completed, trip current {0:F3} kA</sys:String>
+    <sys:String x:Key="L.Msg.Completed">Test completed</sys:String>
     <sys:String x:Key="L.Msg.Pass">PASS</sys:String>
     <sys:String x:Key="L.Msg.Fail">FAIL</sys:String>
     <sys:String x:Key="L.Msg.Emergency">E-Stop triggered. Equipment stopped.</sys:String>
@@ -117,6 +118,7 @@
     <sys:String x:Key="L.Msg.Exported">Exported to: {0}</sys:String>
     <sys:String x:Key="L.Msg.ExportFailed">Export failed: {0}</sys:String>
     <sys:String x:Key="L.Msg.NoExportData">No records to export</sys:String>
+    <sys:String x:Key="L.Msg.NoSelectedRecord">Please select a record in the list first</sys:String>
     <sys:String x:Key="L.Msg.ExportedExcel">Excel exported: {0}</sys:String>
     <sys:String x:Key="L.Dialog.SaveExcel">Export to Excel</sys:String>
     <sys:String x:Key="L.Dialog.ExcelFilter">Excel Workbook (*.xlsx)|*.xlsx</sys:String>
@@ -125,7 +127,7 @@
     <sys:String x:Key="L.Msg.NoChartImage">No chart image stored for this record</sys:String>
 
     <!-- Print report -->
-    <sys:String x:Key="L.Print.Title">Over-current Trip Test Records</sys:String>
+    <sys:String x:Key="L.Print.Title">Smart DC High-Current Generator Test Records</sys:String>
     <sys:String x:Key="L.Print.Subtitle">{0} record(s), printed at {1}</sys:String>
     <sys:String x:Key="L.Msg.Testing">Testing in progress, please wait</sys:String>
 
@@ -146,7 +148,7 @@
     <sys:String x:Key="L.History.Col.Time">Test Time</sys:String>
     <sys:String x:Key="L.History.Col.ProductName">Product Name</sys:String>
     <sys:String x:Key="L.History.Col.ProductCode">Product Code</sys:String>
-    <sys:String x:Key="L.History.Col.Tester">Tester</sys:String>
+    <sys:String x:Key="L.History.Col.Tester">Test Personnel</sys:String>
     <sys:String x:Key="L.History.Col.Station">Sta.</sys:String>
     <sys:String x:Key="L.History.Col.SetCurrent">Set Current (kA)</sys:String>
     <sys:String x:Key="L.History.Col.SetTime">Set Time (s)</sys:String>

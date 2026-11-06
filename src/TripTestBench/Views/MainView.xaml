@@ -214,79 +214,32 @@
                                      IsEnabled="{Binding IsParameterEditable}"
                                      Text="{Binding Tester, UpdateSourceTrigger=PropertyChanged}" />
 
-                            <TextBlock Text="{DynamicResource L.Field.Station}" Style="{StaticResource FieldLabel}" Margin="0,14,0,6" />
+                            <!-- 设定电流：整行显示，保证小数点后三位完整可见 -->
+                            <TextBlock Text="{DynamicResource L.Field.SetCurrent}" Style="{StaticResource FieldLabel}" Margin="0,14,0,6" />
                             <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <RadioButton Grid.Column="0"
-                                             Content="1"
-                                             GroupName="Station"
-                                             Style="{StaticResource SegmentRadio}"
-                                             IsEnabled="{Binding IsParameterEditable}"
-                                             IsChecked="{Binding IsStation1, Mode=TwoWay}" />
-                                <RadioButton Grid.Column="1"
-                                             Content="2"
-                                             GroupName="Station"
-                                             Style="{StaticResource SegmentRadio}"
-                                             Margin="6,0"
-                                             IsEnabled="{Binding IsParameterEditable}"
-                                             IsChecked="{Binding IsStation2, Mode=TwoWay}" />
-                                <RadioButton Grid.Column="2"
-                                             Content="3"
-                                             GroupName="Station"
-                                             Style="{StaticResource SegmentRadio}"
-                                             IsEnabled="{Binding IsParameterEditable}"
-                                             IsChecked="{Binding IsStation3, Mode=TwoWay}" />
+                                <TextBox x:Name="SetCurrentBox"
+                                         Style="{StaticResource InputTextBox}"
+                                         Padding="12,0,44,0"
+                                         FontFamily="Consolas"
+                                         FontSize="16"
+                                         IsEnabled="{Binding IsParameterEditable}"
+                                         Text="{Binding SetCurrentText, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Text="{DynamicResource L.Unit.Ka}"
+                                           Style="{StaticResource CaptionText}"
+                                           HorizontalAlignment="Right"
+                                           Margin="0,0,12,0"
+                                           VerticalAlignment="Center"
+                                           IsHitTestVisible="False" />
                             </Grid>
 
-                            <Grid Margin="0,14,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="12" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="{DynamicResource L.Field.SetCurrent}" Style="{StaticResource FieldLabel}" />
-                                    <Grid>
-                                        <TextBox x:Name="SetCurrentBox"
-                                                 Style="{StaticResource InputTextBox}"
-                                                 Padding="12,0,38,0"
-                                                 FontFamily="Consolas"
-                                                 FontSize="16"
-                                                 IsEnabled="{Binding IsParameterEditable}"
-                                                 Text="{Binding SetCurrentText, UpdateSourceTrigger=PropertyChanged}" />
-                                        <TextBlock Text="{DynamicResource L.Unit.Ka}"
-                                                   Style="{StaticResource CaptionText}"
-                                                   HorizontalAlignment="Right"
-                                                   Margin="0,0,12,0"
-                                                   VerticalAlignment="Center"
-                                                   IsHitTestVisible="False" />
-                                    </Grid>
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="2">
-                                    <TextBlock Text="{DynamicResource L.Field.SetTime}" Style="{StaticResource FieldLabel}" />
-                                    <Grid>
-                                        <TextBox x:Name="SetTimeBox"
-                                                 Style="{StaticResource InputTextBox}"
-                                                 Padding="12,0,38,0"
-                                                 FontFamily="Consolas"
-                                                 FontSize="16"
-                                                 IsEnabled="{Binding IsParameterEditable}"
-                                                 Text="{Binding SetTimeText, UpdateSourceTrigger=PropertyChanged}" />
-                                        <TextBlock Text="{DynamicResource L.Unit.Second}"
-                                                   Style="{StaticResource CaptionText}"
-                                                   HorizontalAlignment="Right"
-                                                   Margin="0,0,12,0"
-                                                   VerticalAlignment="Center"
-                                                   IsHitTestVisible="False" />
-                                    </Grid>
-                                </StackPanel>
-                            </Grid>
+                            <!-- 设定时间：时:分:秒 格式，内部换算为秒 -->
+                            <TextBlock Text="{DynamicResource L.Field.SetTime}" Style="{StaticResource FieldLabel}" Margin="0,14,0,6" />
+                            <TextBox x:Name="SetTimeBox"
+                                     Style="{StaticResource InputTextBox}"
+                                     FontFamily="Consolas"
+                                     FontSize="16"
+                                     IsEnabled="{Binding IsParameterEditable}"
+                                     Text="{Binding SetTimeText, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -305,16 +258,6 @@
                                 <TextBlock Text="{DynamicResource L.Section.Chart}"
                                            Style="{StaticResource SectionTitle}"
                                            Margin="8,0,0,0" />
-                            </StackPanel>
-
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                <TextBlock Text="{DynamicResource L.Readout.PeakCurrent}" Style="{StaticResource CaptionText}" />
-                                <TextBlock Text="{Binding PeakKa, StringFormat={}{0:F3}}"
-                                           FontFamily="Consolas"
-                                           FontSize="15"
-                                           Foreground="{StaticResource B.Accent}"
-                                           Margin="6,0,0,0" />
-                                <TextBlock Text="{DynamicResource L.Unit.Ka}" Style="{StaticResource CaptionText}" Margin="4,0,0,0" />
                             </StackPanel>
                         </Grid>
 
@@ -355,20 +298,15 @@
 
                         <Border Grid.Row="1" Height="1" Background="{StaticResource B.Border}" Margin="0,14" />
 
-                        <!-- 运行时间：读取 D1600（ms ÷1000 = s），试验结束由 PLC 信号驱动 -->
+                        <!-- 运行时间：读取 D1600（ms ÷1000 = s），按时:分:秒显示，试验结束由 PLC 信号驱动 -->
                         <StackPanel Grid.Row="2">
                             <TextBlock Text="{DynamicResource L.Readout.RunTime}" Style="{StaticResource CaptionText}" />
-                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <TextBlock Text="{Binding RunTimeSeconds, StringFormat={}{0:F2}}"
-                                           FontFamily="Consolas"
-                                           FontSize="44"
-                                           FontWeight="Bold"
-                                           Foreground="{StaticResource B.Accent}" />
-                                <TextBlock Text="{DynamicResource L.Unit.Second}"
-                                           Style="{StaticResource UnitText}"
-                                           FontSize="15"
-                                           Margin="8,0,0,8" />
-                            </StackPanel>
+                            <TextBlock Text="{Binding RunTimeText}"
+                                       FontFamily="Consolas"
+                                       FontSize="44"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource B.Accent}"
+                                       Margin="0,4,0,0" />
                         </StackPanel>
 
                         <Border Grid.Row="3" Height="1" Background="{StaticResource B.Border}" Margin="0,16,0,0" />
@@ -388,29 +326,9 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource L.Readout.TripCurrent}" Style="{StaticResource CaptionText}" Margin="0,0,0,9" />
-                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,9">
-                                    <TextBlock Text="{Binding TripKa, StringFormat={}{0:F3}}" FontFamily="Consolas" FontSize="14" Foreground="{StaticResource B.Text}" />
-                                    <TextBlock Text="{DynamicResource L.Unit.Ka}" Style="{StaticResource CaptionText}" Margin="4,0,0,0" />
-                                </StackPanel>
-
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource L.Readout.PeakCurrent}" Style="{StaticResource CaptionText}" Margin="0,0,0,9" />
-                                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,9">
-                                    <TextBlock Text="{Binding PeakKa, StringFormat={}{0:F3}}" FontFamily="Consolas" FontSize="14" Foreground="{StaticResource B.Text}" />
-                                    <TextBlock Text="{DynamicResource L.Unit.Ka}" Style="{StaticResource CaptionText}" Margin="4,0,0,0" />
-                                </StackPanel>
-
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="{DynamicResource L.Readout.RunTime}" Style="{StaticResource CaptionText}" />
-                                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal">
-                                    <TextBlock Text="{Binding RunTimeSeconds, StringFormat={}{0:F2}}" FontFamily="Consolas" FontSize="14" Foreground="{StaticResource B.Text}" />
-                                    <TextBlock Text="{DynamicResource L.Unit.Second}" Style="{StaticResource CaptionText}" Margin="4,0,0,0" />
-                                </StackPanel>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource L.Readout.RunTime}" Style="{StaticResource CaptionText}" />
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding RunTimeText}" FontFamily="Consolas" FontSize="14" Foreground="{StaticResource B.Text}" />
                             </Grid>
                         </Border>
                     </Grid>
@@ -433,6 +351,8 @@
                             Style="{StaticResource GhostButton}"
                             Width="160"
                             Height="54"
+                            FontSize="17"
+                            FontWeight="Bold"
                             Command="{Binding ChargeCommand}" />
                     <Button Content="{DynamicResource L.Button.Start}"
                             Style="{StaticResource StartButton}"

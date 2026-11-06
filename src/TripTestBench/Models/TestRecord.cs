@@ -25,26 +25,17 @@ public sealed class TestRecord
     /// <summary>试验员（默认取登录账号，可修改）。</summary>
     public string Tester { get; set; } = string.Empty;
 
-    /// <summary>试验工位（1 / 2 / 3）。</summary>
-    public int Station { get; set; } = 1;
-
     /// <summary>设定电流 (kA)。</summary>
     public double SetCurrentKa { get; set; }
 
     /// <summary>设定时间 (s)。</summary>
     public double SetTimeSeconds { get; set; }
 
-    /// <summary>脱扣电流 (kA)：PLC 记录的脱扣瞬间电流。</summary>
-    public double TripCurrentKa { get; set; }
-
     /// <summary>峰值电流 (kA)。</summary>
     public double PeakCurrentKa { get; set; }
 
     /// <summary>运行时间 (s)：从下发启动命令到结束的时间。</summary>
     public double RunTimeSeconds { get; set; }
-
-    /// <summary>判定结果：脱扣电流相对设定值偏差不超过 10% 判合格。</summary>
-    public bool Passed { get; set; }
 
     /// <summary>备注（预留字段，可用于记录异常或复检说明）。</summary>
     public string Remark { get; set; } = string.Empty;

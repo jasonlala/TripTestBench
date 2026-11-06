@@ -11,7 +11,7 @@
     <RootNamespace>TripTestBench</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Version>1.0.0</Version>
-    <Product>过流脱扣试验台</Product>
+    <Product>智能直流大电流发生器</Product>
     <Company>Industrial Control</Company>
     <SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>
 
@@ -29,6 +29,9 @@
 
   <ItemGroup>
     <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="offset.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

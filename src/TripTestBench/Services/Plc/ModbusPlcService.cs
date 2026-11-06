@@ -182,7 +182,6 @@ public sealed class ModbusPlcService : IPlcService
 
             // 寄存器原始值 ÷ 1000 还原工程量（D1520 / D1600 为 32 位 int，合并高低字）
             var current = ModbusTcpClient.ToInt32(words[0], words[1]) / PlcPoints.CurrentScale;
-            var trip = words[PlcPoints.D_TripCurrent - PlcPoints.D_RealtimeCurrent] / PlcPoints.CurrentScale;
             var runTime = ModbusTcpClient.ToInt32(
                 words[PlcPoints.D_RunTime - PlcPoints.D_RealtimeCurrent],
                 words[PlcPoints.D_RunTime - PlcPoints.D_RealtimeCurrent + 1]) / PlcPoints.TimeScale;
@@ -198,7 +197,6 @@ public sealed class ModbusPlcService : IPlcService
             {
                 Connected = true,
                 CurrentKa = current,
-                TripCurrentKa = trip,
                 RunTimeSeconds = runTime,
                 PeakCurrentKa = _peak,
                 Completed = m[PlcPoints.M_Completed],                     // M80 完成信号
