@@ -129,9 +129,9 @@ public sealed class RecordRepository
                 r.ProductName,
                 r.ProductCode,
                 r.Tester,
-                r.SetCurrentKa.ToString("F3", CultureInfo.InvariantCulture),
+                r.SetCurrentKa.ToString("F2", CultureInfo.InvariantCulture),
                 TimeSpan.FromSeconds(r.SetTimeSeconds).ToString(@"hh\:mm\:ss"),
-                r.PeakCurrentKa.ToString("F3", CultureInfo.InvariantCulture),
+                r.PeakCurrentKa.ToString("F2", CultureInfo.InvariantCulture),
                 r.RunTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)
             }.Select(Escape)));
         }
@@ -195,9 +195,9 @@ public sealed class RecordRepository
                 record.ProductName,
                 record.ProductCode,
                 record.Tester,
-                Math.Round(record.SetCurrentKa, 3),
+                Math.Round(record.SetCurrentKa, 2),
                 TimeSpan.FromSeconds(record.SetTimeSeconds).ToString(@"hh\:mm\:ss"),
-                Math.Round(record.PeakCurrentKa, 3),
+                Math.Round(record.PeakCurrentKa, 2),
                 Math.Round(record.RunTimeSeconds, 2)
             };
 

@@ -214,7 +214,7 @@
                                      IsEnabled="{Binding IsParameterEditable}"
                                      Text="{Binding Tester, UpdateSourceTrigger=PropertyChanged}" />
 
-                            <!-- 设定电流：整行显示，保证小数点后三位完整可见 -->
+                            <!-- 设定电流：整行显示；仅允许 0~10、最多两位小数 -->
                             <TextBlock Text="{DynamicResource L.Field.SetCurrent}" Style="{StaticResource FieldLabel}" Margin="0,14,0,6" />
                             <Grid>
                                 <TextBox x:Name="SetCurrentBox"
@@ -222,6 +222,7 @@
                                          Padding="12,0,44,0"
                                          FontFamily="Consolas"
                                          FontSize="16"
+                                         PreviewTextInput="SetCurrentBox_OnPreviewTextInput"
                                          IsEnabled="{Binding IsParameterEditable}"
                                          Text="{Binding SetCurrentText, UpdateSourceTrigger=PropertyChanged}" />
                                 <TextBlock Text="{DynamicResource L.Unit.Ka}"
@@ -232,12 +233,14 @@
                                            IsHitTestVisible="False" />
                             </Grid>
 
-                            <!-- 设定时间：时:分:秒 格式，内部换算为秒 -->
+                            <!-- 设定时间：时:分:秒 格式，冒号自动补齐且不可删除，只能填数字 -->
                             <TextBlock Text="{DynamicResource L.Field.SetTime}" Style="{StaticResource FieldLabel}" Margin="0,14,0,6" />
                             <TextBox x:Name="SetTimeBox"
                                      Style="{StaticResource InputTextBox}"
                                      FontFamily="Consolas"
                                      FontSize="16"
+                                     PreviewTextInput="SetTimeBox_OnPreviewTextInput"
+                                     TextChanged="SetTimeBox_OnTextChanged"
                                      IsEnabled="{Binding IsParameterEditable}"
                                      Text="{Binding SetTimeText, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
@@ -284,7 +287,7 @@
                         <StackPanel Grid.Row="0">
                             <TextBlock Text="{DynamicResource L.Readout.RealtimeCurrent}" Style="{StaticResource CaptionText}" />
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <TextBlock Text="{Binding CurrentKa, StringFormat={}{0:F3}}"
+                                <TextBlock Text="{Binding CurrentKa, StringFormat={}{0:F2}}"
                                            FontFamily="Consolas"
                                            FontSize="44"
                                            FontWeight="Bold"

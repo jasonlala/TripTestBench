@@ -163,7 +163,7 @@
                                                 Binding="{Binding Tester}"
                                                 Width="90" />
                             <DataGridTextColumn Header="{DynamicResource L.History.Col.SetCurrent}"
-                                                Binding="{Binding SetCurrentKa, StringFormat={}{0:F3}}"
+                                                Binding="{Binding SetCurrentKa, StringFormat={}{0:F2}}"
                                                 Width="112" />
                             <DataGridTextColumn Header="{DynamicResource L.History.Col.SetTime}"
                                                 Binding="{Binding SetTimeSeconds, Converter={StaticResource SecondsToTime}}"

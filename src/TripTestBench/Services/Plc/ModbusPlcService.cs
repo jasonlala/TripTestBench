@@ -227,7 +227,7 @@ public sealed class ModbusPlcService : IPlcService
         var timeValue = ToRegisterValue(timeSeconds);    // int32（×1000，占 2 个寄存器）
 
         var description =
-            $"设定值 工位 {station}：电流 {currentKa:F3} kA → D{currentRegister}={currentValue}（int32）；"
+            $"设定值 工位 {station}：电流 {currentKa:F2} kA → D{currentRegister}={currentValue}（int32）；"
             + $"时间 {timeSeconds:F2} s → D{timeRegister}={timeValue}（int32）";
 
         return WriteAsync(client =>

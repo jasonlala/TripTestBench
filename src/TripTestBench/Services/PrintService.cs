@@ -184,9 +184,9 @@ public static class PrintService
             row.Cells.Add(CreateCell(record.ProductName, false, true));
             row.Cells.Add(CreateCell(record.ProductCode, false, true));
             row.Cells.Add(CreateCell(record.Tester, false, true));
-            row.Cells.Add(CreateCell(record.SetCurrentKa.ToString("F3"), false, true));
+            row.Cells.Add(CreateCell(record.SetCurrentKa.ToString("F2"), false, true));
             row.Cells.Add(CreateCell(record.SetTimeSeconds.ToString("F2"), false, true));
-            row.Cells.Add(CreateCell(record.PeakCurrentKa.ToString("F3"), false, true));
+            row.Cells.Add(CreateCell(record.PeakCurrentKa.ToString("F2"), false, true));
             row.Cells.Add(CreateCell(record.RunTimeSeconds.ToString("F2"), false, true));
 
             if (hasChart)

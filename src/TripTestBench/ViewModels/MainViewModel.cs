@@ -72,8 +72,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private string _productName = "测试样品";      // 产品名称（默认值，操作员可修改）
     private string _productCode = "SP-0001";       // 产品编号（默认值，操作员可修改）
     private string _tester = string.Empty;         // 试验员（默认取登录账号）
-    private string _setCurrentText = "10.000";     // 设定电流文本（kA，范围 0~10）
-    private string _setTimeText = "00:03:00";      // 设定时间文本（时:分:秒，内部换算为秒）
+    private string _setCurrentText = "0.00";       // 设定电流文本（kA，范围 0~10，两位小数）
+    private string _setTimeText = "00:00:00";      // 设定时间文本（时:分:秒，内部换算为秒）
     private const int Station = 1;                 // 试验工位已取消，固定工位 1（写入 D1000/D1002）
 
     private double _currentKa;                     // 实时电流（kA）
@@ -947,7 +947,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             var plcCurrent = Math.Round(current * factor, 3);
             if (Math.Abs(factor - 1.0) > 1e-9)
             {
-                Logger.User($"电流补偿：设定 {current:F3} kA 命中区间补偿系数 {factor} → 实际写入 {plcCurrent:F3} kA");
+                Logger.User($"电流补偿：设定 {current:F2} kA 命中区间补偿系数 {factor} → 实际写入 {plcCurrent:F2} kA");
             }
 
             await _plc!.WriteTestSettingsAsync(Station, plcCurrent, time).ConfigureAwait(true);
@@ -972,7 +972,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
             // 4) 发送启动电平：只写 M1 = true，无需写 M3
             await _plc!.SetStartTestAsync(true).ConfigureAwait(true);
-            Logger.User($"工艺操作：开始测试，{current:F3} kA / {SetTimeText}（M1=ON）");
+            Logger.User($"工艺操作：开始测试，{current:F2} kA / {SetTimeText}（M1=ON）");
         }).ConfigureAwait(true);
     }
 
@@ -1034,7 +1034,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             Tester = Tester.Trim(),
             SetCurrentKa = double.TryParse(SetCurrentText, NumberStyles.Float, CultureInfo.InvariantCulture, out var sc) ? sc : 0,
             SetTimeSeconds = TryParseTimeToSeconds(SetTimeText, out var st) ? st : 0,
-            PeakCurrentKa = Math.Round(PeakKa, 3),
+            PeakCurrentKa = Math.Round(PeakKa, 2),
             RunTimeSeconds = RunTimeSeconds
         };
 
@@ -1091,9 +1091,9 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             (LanguageManager.Get("L.History.Col.ProductName"), record.ProductName),
             (LanguageManager.Get("L.History.Col.ProductCode"), record.ProductCode),
             (LanguageManager.Get("L.History.Col.Tester"), record.Tester),
-            (LanguageManager.Get("L.History.Col.SetCurrent"), record.SetCurrentKa.ToString("F3", CultureInfo.InvariantCulture)),
+            (LanguageManager.Get("L.History.Col.SetCurrent"), record.SetCurrentKa.ToString("F2", CultureInfo.InvariantCulture)),
             (LanguageManager.Get("L.History.Col.SetTime"), TimeSpan.FromSeconds(record.SetTimeSeconds).ToString(@"hh\:mm\:ss")),
-            (LanguageManager.Get("L.Readout.PeakCurrent") + " (kA)", record.PeakCurrentKa.ToString("F3", CultureInfo.InvariantCulture)),
+            (LanguageManager.Get("L.Readout.PeakCurrent") + " (kA)", record.PeakCurrentKa.ToString("F2", CultureInfo.InvariantCulture)),
             (LanguageManager.Get("L.History.Col.RunTime"), record.RunTimeSeconds.ToString("F2", CultureInfo.InvariantCulture))
         };
     }
@@ -1124,7 +1124,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             Tester = Tester.Trim(),
             SetCurrentKa = _activeSetCurrent,
             SetTimeSeconds = _activeSetTime,
-            PeakCurrentKa = Math.Round(PeakKa, 3),
+            PeakCurrentKa = Math.Round(PeakKa, 2),
             RunTimeSeconds = RunTimeSeconds
         };
         // ★ 立刻快照本次试验的曲线数据：
@@ -1135,7 +1135,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
         UpdateCommandStates();
 
-        Logger.Info($"测试完成：峰值电流 {PeakKa:F3} kA，运行 {RunTimeSeconds:F2} s");
+        Logger.Info($"测试完成：峰值电流 {PeakKa:F2} kA，运行 {RunTimeSeconds:F2} s");
         ShowToast(LanguageManager.Get("L.Msg.Completed"));
     }
 
